@@ -1,0 +1,303 @@
+.msg-sent .label_text,
+.msg-rcvd .label_text {
+    display: block;
+    font-style: italic;
+    font-weight: bold;
+    padding-top:20px;
+}
+
+.loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.kissai-file-list ul>li {
+    display: flex !important;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center; /* Aligns items vertically in the center */
+}
+
+.kissai-file-list ul>li div:first-child {
+    flex: 1; /* Takes remaining space */
+    white-space: nowrap; /* Prevents the text from wrapping */
+    overflow: hidden; /* Hides text that overflows the div */
+    text-overflow: ellipsis; /* Adds an ellipsis if the text overflows */
+}
+
+.kissai-file-list ul>li div:not(:nth-child(1)) {
+    text-align: right; /* Aligns text to the right */
+}
+
+.kissai-file-list ul>li div:nth-child(2) {
+    flex: 0 0 10%; /* Do not grow or shrink, and base width is 10% */
+}
+
+.kissai-file-list ul>li div:nth-child(3) {
+    flex: 0 0 20%; /* Do not grow or shrink, and base width is 10% */
+}
+
+.kissai-file-list ul a:has(svg) {
+    padding: 5px 10px;
+    display: flex !important;
+    align-items: center;
+    flex: 0 0 auto; /* Does not grow or shrink, adjusts based on content */
+}
+
+@media only screen and (max-width: 750px) {
+    .kissai-file-list ul>li {
+        flex-direction: column;
+        align-items: flex-start; /* Aligns items to the start of the flex container */
+        margin-bottom:20px !important;
+    }
+
+    .kissai-file-list ul>li div:first-child {
+        max-width: 90%;
+    }
+    
+    .kissai-file-list ul>li div:first-child,
+    .kissai-file-list ul>li div:nth-child(2),
+    .kissai-file-list ul>li div:nth-child(3) {
+        flex: 0 0 auto; /* Allows these elements to fit content */
+        text-align: left; /* Aligns text to the left */
+        width: 100%; /* Takes full width */
+        white-space: normal; /* Allows text wrapping */
+    }
+
+    .kissai-file-list ul>li div:nth-child(2),
+    .kissai-file-list ul>li div:nth-child(3) {
+        padding-left: 10px;
+    }
+
+    .kissai-file-list ul>li a:has(svg) {
+        display: flex !important;
+        position: absolute;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-content: flex-end;
+    }
+   .kissai-file-list ul>li a:has(svg):nth-last-child(2) {
+        right: 0px; /* Position to the right inside the li */
+    }
+   .kissai-file-list ul>li a:has(svg):nth-last-child(1) {
+        margin-top:50px;
+        right: 0px; /* Position to the right inside the li */
+    }
+}
+
+.file-drop-area {
+    height: 200px;
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    text-align: center;
+    color: #ccc;
+    margin: 20px 0;
+    position: relative;
+}
+
+.file-drop-area.hover {
+    color: #333;
+    border-color: #666;
+}
+
+.file-drop-area input[type="file"] {
+    display: none;
+}
+
+.file-drop-area label[for='file-upload'] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    line-height: 200px; /* Center text vertically */
+    text-align: center;
+    cursor: pointer;
+}
+
+.file-list-datetime {
+    margin-right: 5px;
+}
+
+.kissai-file-list .svgbutton {
+    border-radius: .375rem;
+    margin-left: 5px;
+}
+
+.kissai-file-list .svgbutton:hover {
+    background-color: rgba(100, 100, 100, 0.2);
+}
+.kissai-file-list .svgbutton.disabled {
+    color: rgba(128, 128, 128, 0.49);
+}
+
+.red-placeholder::placeholder {
+    color: #f00 !important; /* Red color for placeholder */
+}
+
+#kissai-admin-widget-container input::placeholder,
+#kissai-admin-widget-container textarea::placeholder {
+    color: #999;
+}
+
+.wp-admin #kissai-admin-widget-container input[type="text"] {
+    width:100%;
+}
+
+#kissai-admin-widget-container .kissai-text-upload-area input[type="text"] {
+    width:100%;
+}
+
+#kissai-progress-container {
+    display: none;
+    width: 100%;
+    background-color: #f3f3f3;
+}
+#kissai-progress-bar {
+    width: 0;
+    height: 30px;
+    background-color: #4c82af;
+    text-align: center;
+    line-height: 30px;
+    color: white;
+}
+
+.svgbutton {
+    border-radius: .375rem;
+    margin: 5px 10px;
+    padding: 5px 10px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    fill: currentColor;
+}
+.svgbutton:hover {
+    background-color: rgba(100, 100, 100, 0.2);
+}
+.svgbutton:focus {
+    /*color: #043959;*/
+    box-shadow: 0 0 0 2px #2271b1;
+    outline: 2px solid transparent;
+}
+
+.kissai-widget-button-container {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: center;
+}
+
+.load-query-sample,
+.query-sample {
+    margin: 5px 10px 5px 0px;
+    text-transform: unset;
+}
+
+a.load-query-sample,
+a.query-sample {
+    display: block;
+    cursor: pointer;
+}
+
+.load-query-sample span,
+.query-sample span {
+    margin-right:1em;
+}
+
+.suggested-questions-header {
+    display: none;
+}
+
+button.query-sample.button {
+    text-align: left;
+    text-transform: unset;
+    z-index: 10;
+}
+
+.widget-divider {
+    display: flex; align-items: center; text-align: center;
+}
+
+.widget-divider .horizontal-line {
+    flex: 1; height: 1px; background-color: #ccc;
+}
+
+.widget-divider .divider-text {
+    padding: 0 10px; background-color: #fff; color: #666;
+}
+
+.reload-button-container {
+    position: relative;
+    right: 0px;
+    /*margin-top: -45px;*/
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+    z-index: 1;
+}
+.suggested-questions-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Optional minimal styling */
+.kissai-suggested-questions-container {
+    margin: 1em 0;
+    padding: 1em;
+    border: 1px solid #ddd;
+    background: #f9f9f9;
+}
+#kissai-questions-table {
+    width: 100%;
+    margin-top: 1em;
+}
+#kissai-questions-table tr {
+    cursor: pointer;
+}
+#kissai-questions-table tbody tr.selected {
+    background-color: #cceeff !important; /* highlight selected row */
+}
+.kissai-suggested-questions-container .button-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.kissai-suggested-questions-container .button-container button {
+    margin: 0px 20px;
+}
+
+table.msg-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+}
+
+/* Cell borders and spacing */
+table.msg-table th,
+table.msg-table td {
+    border: 1px solid #ccc;
+    padding: 0.75em;
+    vertical-align: top;
+}
+
+/* Table header styling */
+table.msg-table thead th {
+    background-color: #f2f2f2; /* lighter background for headers */
+    font-weight: bold;
+    text-align: left;
+}
+
+/* Optional hover effect for table rows */
+table.msg-table tbody tr:hover {
+    background-color: #fafafa;
+}

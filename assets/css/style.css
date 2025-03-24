@@ -1,0 +1,109 @@
+.loading-animation-container {
+    display: none;
+}
+
+.loading-animation {
+    width: 20px; /* Set the maximum width of the SVG */
+    height: 20px; /* Set the maximum height of the SVG */
+    display: none;
+    margin: auto; /* Center the SVG if needed */
+}
+
+.loading-animation svg {
+    max-height:20px;
+    width: 100%;
+    height: 100%;
+    animation: grow-shrink 1.2s infinite ease-in-out;
+}
+
+.spinner-animation {
+    width: 25px; /* Set the maximum width of the SVG */
+    height: 25px; /* Set the maximum height of the SVG */
+    display: none;
+    margin: auto; /* Center the SVG if needed */
+    padding: 10px 0px;
+}
+
+.spinner-animation svg {
+    max-height:25px;
+    width: 100%;
+    height: 100%;
+    animation: rotate 1.5s infinite linear;
+}
+
+@keyframes grow-shrink {
+    0%, 100% {
+        transform: scale(0.5); /* Shrink to half its size (10px effective diameter) */
+    }
+    50% {
+        transform: scale(1); /* Grow to full size (20px effective diameter) */
+    }
+}
+
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.msg_time_stamp {
+    display: flex;
+    align-items: flex-end;
+    padding-right: 20px;
+}
+
+.msg_header {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 0px 5px;
+}
+
+#messages-container span.highlight {
+    background-color: yellow;
+}
+
+.custom-notice.warning {
+    border-left-color: #dba617;
+}
+
+.custom-notice {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-left-width: 4px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    margin: 5px 0 15px;
+    padding: 1px 12px
+}
+
+.custom-notice p {
+    margin: .5em 0 !important;
+    padding: 2px;
+}
+
+.custom-notice.is-dismissible {
+    padding-right: 38px;
+    position: relative
+}
+
+.custom-notice.is-dismissible .dismiss-button {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 18px;
+    color: #333;
+}
+p.notice {
+    padding: 10px 20px;
+}
+.kissai-admin-table {
+    background-color:white;
+    border-radius: 10px;
+}
+.kissai-admin-table th {
+    padding-left: 5px;
+}

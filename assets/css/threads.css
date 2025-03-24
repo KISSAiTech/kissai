@@ -1,0 +1,113 @@
+#kissai-thread-container {
+    display: flex;
+    padding: 20px;
+}
+
+#threads-container {
+    flex: 1; /* Takes up 1 portion of the space */
+    min-width: 300px; /* Minimum width */
+    margin-right: 20px; /* Space between threads and messages */
+    padding: 10px;
+    border-right: 2px solid #ccc; /* Separator */
+    overflow-y: auto; /* Enables vertical scroll if content is long */
+}
+
+#messages-container {
+    flex: 3;
+    background-color: white;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+#messages-container .messages {
+    width: 100%;
+}
+.msg-sent .label_text,
+.msg-rcvd .label_text {
+    display: block;
+    font-style: italic;
+    font-weight: bold;
+}
+
+.selected-thread {
+    background-color: #b0c4de; /* A light blue shade, or choose your preferred highlight color */
+}
+
+tr.thread-link {
+    cursor: pointer;
+}
+
+tr.thread-link:hover {
+    background-color: #b0c4de5c;
+}
+
+.msg-sent {
+    background-color: aliceblue;
+    padding-bottom: 20px;
+    padding-left: 10px;
+    border-radius: 10px;
+    margin-top: 5px;
+}
+
+.msg-rcvd {
+    margin-bottom: 20px;
+}
+.thread-list th{
+    display: flex;
+    justify-content: space-between;
+}
+.thread-list th svg {
+    height: 15px;
+}
+.thread-load-more {
+    cursor: pointer;
+}
+.thread-load-more:hover {
+    background-color: #c4b0de4a;
+}
+.thread-search-container {
+    padding-bottom :10px;
+    display: flex;
+    justify-content: space-between;
+}
+.thread-search-container input {
+    width: 100%;
+    margin-right: 10px;
+}
+.sort-icon {
+    display: flex;
+    align-items: center;
+}
+.sort-icon:focus {
+    box-shadow: none;
+}
+.dropdown-menu {
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+    list-style-type: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu ul {
+    padding: 0;
+    margin: 0;
+}
+
+.dropdown-menu ul li {
+    padding: 5px;
+}
+
+.dropdown-menu ul li:hover {
+    background-color: #f0f0f0;
+}
+
+.dropdown-menu ul li a {
+    text-decoration: none;
+    color: black;
+}
+
+.dropdown-menu ul li a:hover {
+    background-color: #f0f0f0;
+}
