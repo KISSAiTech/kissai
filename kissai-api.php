@@ -528,39 +528,51 @@ class KissAi_API extends API_Base {
         }
         return null;
     }
-    public function check_permission($action, $index, $user = null) {
+    public function check_permission($action, $index = -1, $user = null) {
         if ($user === null) {
             $user = $this->get_current_kissai_user();
         }
         $license = null;
-        if ($user && $user->licenses) {
-            $kissai_api_key = get_kissai_option('api_key');
-            $license = $this->get_key_license($user, $kissai_api_key);
-            if ($license && $license->price > 0) {
+        if ($action == "create-message") {
+            if (!$this->is_service_key_from_kissai()) {
                 return true;
+            }
+            if ($user->credit) {
+                if ($user->credit->minimum_credit < $user->credit->credit_balance) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
             }
         }
-        if ($license && $license->price == 0) {
-            if ($action == "edit-assistant") {
-                if ($index >= 3)
-                    return false;
-                else
+        else {
+            if ($user && $user->licenses) {
+                $kissai_api_key = get_kissai_option('api_key');
+                $license = $this->get_key_license($user, $kissai_api_key);
+                if ($license && $license->price > 0) {
                     return true;
+                }
             }
-            else if ($action == "upload-training-file") {
-                if ($index >= 5)
-                    return false;
-                else
+            if ($license && $license->price == 0) {
+                if ($action == "edit-assistant") {
+                    if ($index >= 3)
+                        return false;
+                    else
+                        return true;
+                } else if ($action == "upload-training-file") {
+                    if ($index >= 5)
+                        return false;
+                    else
+                        return true;
+                } else if ($action == "thread") {
+                    if ($index >= 3)
+                        return false;
+                    else
+                        return true;
+                } else {
                     return true;
-            }
-            else if ($action == "thread") {
-                if ($index >= 3)
-                    return false;
-                else
-                    return true;
-            }
-            else {
-                return true;
+                }
             }
         }
         return false;

@@ -85,23 +85,11 @@ class KissAi_Admin_Elements {
                     <td class="action">
                         <?php
                         if ($openai_assistant && isset($openai_assistant['name'])) :
-// DevCode Begins
-                        ?>
-                        <?php
 
-                            if ($kissai_api->check_permission($button_class, $count)) {
-// DevCode Ends
                         ?>
                         <a href="#" data-assistant-id="<?php echo esc_attr($assistant['assistant_id']); ?>" data-action="<?php echo esc_attr($ajax_function); ?>" class="button assistant-action-button <?php echo esc_html($button_class); ?>"><?php echo esc_html($button_text); ?></a>
                         <?php
-// DevCode Begins
-                            }
-                            else {
-                        ?>
-                            <a href="<?php echo esc_url(KissAi_API_Endpoints::SERVER_DOMAIN . '/my-account/#plan'); ?>" class="button">Upgrade</a>
-                        <?php
-                            }
-// DevCode Ends
+
                         $count++;
                             ?>
                         <?php endif; ?>
@@ -140,21 +128,30 @@ class KissAi_Admin_Elements {
         if (!empty($models)) {
             $models = OpenAI_API::sort_models_by_key($models, 'created', 'desc');
 
-            $models = OpenAI_API::filter_models_by_conditions($models, ['gpt'], ['system', 'openai']);
+            $models = OpenAI_API::filter_models_by_conditions($models, ['gpt', 'o1', 'o3'], ['system', 'openai']);
 
             $models = OpenAI_API::filter_models_by_conditions($models, ['preview'], ['openai-internal'], false, false);
 
             if (isset($models['data'])) {
-                $filtered_models = array_filter($models['data'], function($model) use($chatgpt_api) {
-                    if (OpenAI_API::check_model_id($model, ['o1', 'o3'])) {
-                        if ($chatgpt_api->test_model_compatibility_with_assistant($model['id'])) {
+                if ($kissai_api->is_service_key_from_kissai()) {
+                    $user = $kissai_api->get_current_kissai_user();
+                    $available_models = $user->models ?? [];
+                    $filtered_models = array_filter($models['data'], function ($model) use ($available_models) {
+                        return in_array($model['id'], $available_models);
+                    });
+                }
+                else {
+                    $filtered_models = array_filter($models['data'], function ($model) use ($chatgpt_api) {
+                        if (OpenAI_API::check_model_id($model, ['o1', 'o3'])) {
+                            if ($chatgpt_api->test_model_compatibility_with_assistant($model['id'])) {
+                                return true;
+                            }
+                            return false;
+                        } else
                             return true;
-                        }
-                        return false;
-                    }
-                    else
-                        return true;
-                });
+                    });
+                }
+
                 $models = OpenAI_API::models_data_into_object($filtered_models);
             }
         

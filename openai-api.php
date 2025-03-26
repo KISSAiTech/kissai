@@ -6,6 +6,7 @@ class OpenAI_Endpoints {
     const assistants = self::server . "assistants";
     const assistant = self::server . "assistants/{assistant_id}";
     const threads = self::server . "threads";
+    const thread = self::server . "threads/{thread_id}";
     const message = self::server . "threads/{thread_id}/messages";
     const runs = self::server . "threads/{thread_id}/runs";
     const run_status = self::server . "threads/{thread_id}/runs/{run_id}";
@@ -412,6 +413,34 @@ class OpenAI_API {
         }
     }
 
+    public function update_thread($thread_id, $data) {
+        $endpoint = strtr(OpenAI_Endpoints::thread, [
+            '{thread_id}' => $thread_id
+        ]);
+        $header = $this->get_header();
+        $sent = array(
+            'headers' => $header,
+            'body' => json_encode($data, JSON_PRESERVE_ZERO_FRACTION),
+            'data_format' => 'body',
+        );
+        $response = wp_remote_post($endpoint, $sent);
+        if (is_wp_error($response)) {
+            kissai_error_log('Error updating thread: ' . $response->get_error_message());
+            return false;
+        }
+        $response_code = wp_remote_retrieve_response_code($response);
+        $response_body = json_decode(wp_remote_retrieve_body($response), true);
+
+        if ($response_code != 200) {
+            kissai_error_log('Error updating thread: ' . json_encode($response_body));
+            return [ 'response' => $response, 'body' => $response_body ];
+        }
+        if (isset($response_body['id'])) {
+            return $response_body;
+        }
+        return null;
+    }
+
     private static function replace_url_with_args($url, $args) {
         foreach ($args as $key => $value) {
             if (str_starts_with($key, "{") && str_ends_with($key, "}")) {
@@ -578,7 +607,13 @@ class OpenAI_API {
 
     public static function check_model_id($model, $id_conditions = [], $id_inclusive = true) {
         // Split the 'id' by hyphen (-)
-        $id_sections = explode('-', $model['id']);
+        $model_id = null;
+        if (is_array($model))
+            $model_id = $model['id'];
+        else if (is_string($model))
+            $model_id = $model;
+
+        $id_sections = explode('-', $model_id);
         $id_match = false;
 
         // Check if each condition matches the respective section of the 'id'
@@ -673,13 +708,17 @@ class OpenAI_API {
             $tools = [['type' => "file_search"],['type' => "function", 'function' => self::get_current_time_function_def()]];
         }
         if ($model) {
-            $body_sent = json_encode(array(
+            $body = [
                 'name' => $name,
 //                'tools'=> [['type' => "file_search"],['type' => "code_interpreter"]],
                 'tools'=> $tools,
                 'model' => $model['id'],
                 'instructions' => self::DEFAULT_INSTRUCTIONS
-            ));
+            ];
+            if (self::check_model_id($model, ['o1', 'o3'])) {
+                $body['reasoning_effort'] = 'high';
+            }
+            $body_sent = json_encode($body);
             $sent = array(
                 'headers' => $this->get_header(),
                 'body' => $body_sent,
@@ -922,9 +961,13 @@ class OpenAI_API {
     }
     
     public function update_assistant_model($model_id) {
-        return $this->update_assistant(array(
+        $data = [
             'model' => $model_id
-        ));
+        ];
+        if (self::check_model_id($model_id, ['o1', 'o3'])) {
+            $data['reasoning_effort'] = 'high';
+        }
+        return $this->update_assistant($data);
     }
 
     public function update_assistant_function($assistant, $function_definition) {
@@ -1092,7 +1135,7 @@ class OpenAI_API {
      * with the provided prompt and sends this message to the ChatGPT API using the thread-specific endpoint.
      * The sent message is saved immediately before sending. Upon receiving a response from the API, 
      * the response is also saved. Both the sent message and the received response are stored with 
-     * appropriate message types ('sent' or or 'repeated' or 'received').
+     * appropriate message types ('sent' or 'repeated' or 'received').
      *
      * If the API call is successful, the received response is returned. In case of an error (e.g., network issues,
      * API errors), the error is logged, and false is returned. This function relies on WordPress's HTTP API

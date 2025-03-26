@@ -33,11 +33,7 @@ if (!defined( 'KISSAI_SLUG') ) {
     define('KISSAI_SLUG', substr(KISSAI_BASENAME, 0, strpos(KISSAI_BASENAME, '/')) );
 }
 
-// DevCode Begins
-if (!defined('KISSAI_UPDATER_PLUGIN') ) {
-    define('KISSAI_UPDATER_PLUGIN', 'kissai-updater/kissai-updater.php');
-}
-// DevCode Ends
+
 
 function get_kissai_option($option_name, $default = null) {
     $option_name = KISSAI_SLUG . '_' . $option_name;
@@ -75,9 +71,7 @@ require_once plugin_dir_path( __FILE__ ) . 'register.php';
 require_once plugin_dir_path( __FILE__ ) . 'settings.php';
 require_once plugin_dir_path( __FILE__ ) . 'assistants.php';
 require_once plugin_dir_path( __FILE__ ) . 'threads.php';
-// DevCode Begins
-require_once plugin_dir_path( __FILE__ ) . 'update-plugin.php';
-// DevCode Ends
+
 
 // phpcs:disable Squiz.PHP.DiscouragedFunctions.Discouraged
 ini_set('serialize_precision', 10);
@@ -229,29 +223,7 @@ function kissai_enqueue_scripts() {
 }
 add_action('wp_enqueue_scripts', 'kissai_enqueue_scripts');
 
-// DevCode Begins
-function delete_kissai_updater_plugin() {
-    if ( is_plugin_installed( KISSAI_UPDATER_PLUGIN ) ) {
-        kissai_error_log( 'KissAi Updater plugin detected. Attempting to delete...' );
-        // Ensure plugin functions are loaded.
-        if ( ! function_exists( 'delete_plugins' ) ) {
-            require_once ABSPATH . 'wp-admin/includes/plugin.php';
-        }
 
-        // Attempt to delete the plugin.
-        $result = delete_plugins( [ KISSAI_UPDATER_PLUGIN ] );
-
-        if ( is_wp_error( $result ) ) {
-            kissai_error_log( 'Failed to delete KissAi Updater plugin: ' . $result->get_error_message() );
-        } else {
-            kissai_error_log( 'KissAi Updater plugin deleted successfully.' );
-        }
-    }
-    else {
-        kissai_error_log( 'KissAi Updater plugin not detected.' );
-    }
-}
-// DevCode Ends
 function kissai_init_plugin() {
     $kissai_bg_process_api_key = get_kissai_option('bg_process_api_key');
     if (empty($kissai_bg_process_api_key)) {
@@ -265,9 +237,7 @@ function kissai_init_plugin() {
         add_option('kissai_db_version', KissAi_DB_Tables::DB_VERSION);
     }
 
-// DevCode Begins
-    delete_kissai_updater_plugin();
-// DevCode Ends
+
 }
 register_activation_hook(__FILE__, 'kissai_init_plugin');
 
@@ -468,18 +438,7 @@ function add_kissai_threads_page() {
     );
 }
 
-// DevCode Begins
-function add_kissai_update_page() {
-    add_submenu_page(
-        'kissai-about',                 // Parent slug
-        'Update Plugin',              // Page title
-        'Update',                     // Menu title
-        'manage_options',               // Capability
-        'kissai-update-plugin',       // Menu slug
-        'display_kissai_update_plugin'  // Function to display the page content
-    );
-}
-// DevCode Ends
+
 
 add_action('admin_menu', 'add_kissai_about_page');
 add_action('admin_menu', 'add_kissai_register_page');
@@ -487,9 +446,7 @@ add_action('admin_menu', 'add_kissai_settings_page');
 add_action('admin_menu', 'add_kissai_assistants_page');
 add_action('admin_menu', 'add_kissai_training_page');
 add_action('admin_menu', 'add_kissai_threads_page');
-// DevCode Begins
-add_action('admin_menu', 'add_kissai_update_page');
-// DevCode Ends
+
 
 /**
  * Provide detailed plugin info (for the 'View details' popup).
@@ -703,9 +660,7 @@ function kissai_manual_page_content() {
 
 // Display function for the About page
 function display_kissai_about_page() {
-// DevCode Begins
-    delete_kissai_updater_plugin();
-// DevCode Ends
+
     // phpcs:ignore WordPress.Security.NonceVerification.Recommended
     $tab = isset($_GET['tab']) ? sanitize_text_field(wp_unslash($_GET['tab'])) : 'about';
     ?>
@@ -735,3 +690,4 @@ function display_kissai_about_page() {
     </div>
     <?php
 }
+

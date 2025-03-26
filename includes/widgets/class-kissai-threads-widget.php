@@ -117,16 +117,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
         global $kissai_db, $kissai_api;
         $user = $kissai_api->get_current_kissai_user();
         $permitted = true;
-        // DevCode Begins
-        if ($user) {
-            $permitted = $kissai_api->check_permission('thread', 4, $user);
-        }
-        if (!$permitted) {
-            $sort_order = KissAi_Thread_SortOrder::newer;
-            $search = '';
-            $limit = 3;
-        }
-        // DevCode Ends
+        
         $threads = $kissai_db->read_threads_list($assistant_id, $offset, $limit, $sort_order, $search, $include_utility_messages);
         $count = $kissai_db->count_threads_list_items($assistant_id, $search);
         $html = '';
@@ -246,9 +237,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
         $thread_header_content .= self::generate_sort_order_css('KissAi_Thread_SortOrder');
         global $kissai_api;
         $permitted = true;
-// DevCode Begins
-        $permitted = $kissai_api->check_permission('thread', 4);
-// DevCode Ends
+
         if ($permitted) {
             $menu = [KissAi_Thread_SortOrder::newer => 'Newest to Oldest', KissAi_Thread_SortOrder::older => 'Oldest to Newest'];
         }
@@ -311,9 +300,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
             : KissAi_Thread_SortOrder::older;
 
         $permitted = true;
-        // DevCode Begins
-        $permitted = $kissai_api->check_permission('thread', 4);
-        // DevCode Ends
+        
         $script = '';
         if (isset($_POST['sort_order'])) {
             if (!$permitted) {
@@ -393,3 +380,4 @@ add_action('wp_ajax_nopriv_load_kissai_threads', [KissAi_Threads_Widget::class, 
 
 add_action('wp_ajax_load_kissai_messages', [KissAi_Threads_Widget::class, 'load_kissai_messages']);
 add_action('wp_ajax_nopriv_load_kissai_messages', [KissAi_Threads_Widget::class, 'load_kissai_messages']);
+

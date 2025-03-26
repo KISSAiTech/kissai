@@ -707,9 +707,21 @@ class KissAi_Widget extends KissAi_Base_Widget {
             else {
                 if ($chatgpt_api->getThreadId() !== null) {
                     $nonce = $chatgpt_api->chatgpt_save_nonce();
+                    global $kissai_api;
+                    if ($kissai_api->check_permission("create-message" ) === false) {
+                        $response = ['error' => [
+                                "message" => "It appears that your account doesn't have sufficient credit to complete this request. Please review your KissAi Credit balance or add credit to continue."
+                        ]];
+                        $response['message_type'] = OpenAI_API::MESSAGE_TYPE_RECEIVED;
+                        $response['created_at'] = self::convertUnixToUTC(time());
+                        $response['guid'] = $nonce;
+                        wp_send_json_error($response);
+                    }
                     $response = $chatgpt_api->chatgpt_create_message($prompt, $nonce);
                     if (isset($response['id'])) {
                         $timestamp = $response['created_at'] ?? time();
+                        $thread_id = $response['thread_id'];
+                        $vector_store_id = $chatgpt_api->get_vector_store_id();
                         $created_at = self::convertUnixToUTC($timestamp);
                         if ($process_from == 'server') {
                             $rest_url = home_url( '/wp-json/kissai_api/v1/run_thread/' );
@@ -748,12 +760,20 @@ class KissAi_Widget extends KissAi_Base_Widget {
                             }
                         }
                         else if ($process_from == 'local') {
-                            $url = strtr(OpenAI_Endpoints::runs, array('{thread_id}' => $chatgpt_api->getThreadId()));
+                            $chatgpt_api->update_thread($thread_id, [
+                                'tool_resources' => [
+                                    'file_search' => [
+                                        'vector_store_ids' => [ $vector_store_id ]
+                                    ]
+                                ]
+                            ]);
+                            $url = strtr(OpenAI_Endpoints::runs, array('{thread_id}' => $thread_id));
                             $headers = $chatgpt_api->get_header();
 
                             $body = array(
                                 'assistant_id' => $chatgpt_api->get_assistant_id(),
                                 'stream' => true,
+                                'tool_choice' => ['type' => 'file_search'],
                             );
 
                             wp_send_json_success(
@@ -765,11 +785,13 @@ class KissAi_Widget extends KissAi_Base_Widget {
                                 'fetch_message_type' => OpenAI_API::MESSAGE_TYPE_RECEIVED,
                                 'guid' => $nonce,
                                 'created_at' => $created_at,
-                                'script' => "updateCssProperty('.msg-rcvd', 'before', 'content', '" . $atts['ai_name'] . "', 'important');"
                             ]);
                         }
                     } else {
                         if ( isset( $response['error'] ) && isset( $response['error']['message'] ) ) {
+                            $response['message_type'] = OpenAI_API::MESSAGE_TYPE_RECEIVED;
+                            $response['created_at'] = self::convertUnixToUTC(time());
+                            $response['guid'] = $nonce;
                             wp_send_json_error($response);
                         }
                         else
@@ -975,6 +997,7 @@ class KissAi_Widget extends KissAi_Base_Widget {
         $file_name    = isset($_POST['filename'])
             ? sanitize_file_name( wp_unslash($_POST['filename']) )
             : null;
+        
         $file_id      = isset($_POST['file_id'])
             ? sanitize_text_field( wp_unslash($_POST['file_id']) )
             : null;
@@ -989,9 +1012,7 @@ class KissAi_Widget extends KissAi_Base_Widget {
             $assistant_id = $chatgpt_api->get_assistant_id();
             $file_count   = $kissai_db->get_assistant_knowledge_count($assistant_id) + 1;
             $permitted = true;
-            // DevCode Begins
-            $permitted    = $kissai_api->check_permission('upload-training-file', $file_count);
-            // DevCode Ends
+            
 
             if (! $permitted) {
                 wp_send_json_error('Your current license does not permit adding additional training materials.');
@@ -1031,11 +1052,13 @@ class KissAi_Widget extends KissAi_Base_Widget {
                             // Unslash and sanitize each filename
                             $unslashed_name = wp_unslash($original_name);
                             $raw_file_array['name'][$index] = sanitize_file_name($unslashed_name);
+                            
                         }
                     } else {
                         // Single file
                         $unslashed_name = wp_unslash($raw_file_array['name']);
                         $raw_file_array['name'] = sanitize_file_name($unslashed_name);
+                        
                     }
 
                     // Optionally override the sanitized single filename if $file_name is set
@@ -1449,9 +1472,7 @@ class KissAi_Widget extends KissAi_Base_Widget {
             // Show a message if user has reached max uploads
             $user       = $kissai_api->get_current_kissai_user();
             $permitted = true;
-            // DevCode Begins
-            $permitted  = $kissai_api->check_permission('upload-training-file', $file_count, $user);
-            // DevCode Ends
+            
 
             if (!$permitted) {
                 $output .= "<div style='text-align: center;'>"
@@ -1753,7 +1774,15 @@ add_action('widgets_init', 'register_kissai_widget');
 add_action('rest_api_init', function () {
     register_rest_route('kissai_api/v1', '/run_thread/', array(
         'methods' => WP_REST_Server::CREATABLE,
-        'callback' => 'kissai_run_thread_bg'
+        'callback' => 'kissai_run_thread_bg',
+        'permission_callback' => function () {
+            $server_ip = isset($_SERVER['SERVER_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['SERVER_ADDR'])) : null;
+            $remote_ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : null;
+            if ($server_ip === null || $remote_ip === null || $server_ip !== $remote_ip) {
+                return false;
+            }
+            return true;
+        }
     ));
 });
 
@@ -1855,3 +1884,4 @@ add_action('wp_ajax_nopriv_kissai_ajax_suggested_questions', [KissAi_Widget::cla
 
 add_action('wp_ajax_kissai_update_knowledge_file_id', [KissAi_Widget::class, 'kissai_update_knowledge_file_id']);
 add_action('wp_ajax_nopriv_kissai_update_knowledge_file_id', [KissAi_Widget::class, 'kissai_update_knowledge_file_id']);
+

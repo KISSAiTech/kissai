@@ -798,6 +798,11 @@ jQuery(function($) {
                             }, 5000); // Continue fetching the next part of the message stream
                         }
                     } else {
+                        if (responseData.hasOwnProperty('error') && responseData.error.hasOwnProperty('message') && responseData.hasOwnProperty('message_type')) {
+                            console.log('Error from server: ' + responseData.error.message);
+                            appendToContainer(responseData.message_type, responseData.guid, responseData.error.message, responseData.created_at)
+                        }
+                        kissai_widget_loading_show(false);
                         // Handle unexpected response format
                         console.log('Received an unexpected response format. Full response:' + JSON.stringify(response));
                     }

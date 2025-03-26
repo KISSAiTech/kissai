@@ -249,7 +249,7 @@ function get_assistant_details() {
             'name' => $assistant['name'],
             'assistant_id' => $assistant['id'],
             'model' => $assistant['model']
-    ]);
+        ]);
     } else {
         wp_send_json_error(['message' => 'Assistant not found']);
     }

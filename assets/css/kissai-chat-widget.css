@@ -278,16 +278,33 @@ button.query-sample.button {
 
 table.msg-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     margin-bottom: 1em;
+    border-radius: .375rem;
+    overflow: hidden;
+    border: 1px solid #ccc; /* Outer border for the whole table */
 }
 
-/* Cell borders and spacing */
+/* Remove double borders by applying borders selectively */
 table.msg-table th,
 table.msg-table td {
-    border: 1px solid #ccc;
+    color: rgb(13, 13, 13);
     padding: 0.75em;
     vertical-align: top;
+    border-bottom: 1px solid #ccc; /* Keep bottom border */
+    border-right: 1px solid #ccc; /* Keep right border */
+}
+
+/* Ensure last column doesn't have a right border */
+table.msg-table th:last-child,
+table.msg-table td:last-child {
+    border-right: none;
+}
+
+/* Ensure last row cells don't have a bottom border */
+table.msg-table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 /* Table header styling */
@@ -300,4 +317,21 @@ table.msg-table thead th {
 /* Optional hover effect for table rows */
 table.msg-table tbody tr:hover {
     background-color: #fafafa;
+}
+
+/* Apply rounded corners properly */
+table.msg-table th:first-child {
+    border-top-left-radius: .375rem;
+}
+
+table.msg-table th:last-child {
+    border-top-right-radius: .375rem;
+}
+
+table.msg-table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: .375rem;
+}
+
+table.msg-table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: .375rem;
 }

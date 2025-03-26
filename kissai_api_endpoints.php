@@ -1,15 +1,8 @@
 <?php
 
-// DevCode Begins
-// Determine the server domain based on the environment
-if (strpos($_SERVER['HTTP_HOST'] ?? '', '.local') !== false) {
-    define('KISSAI_SERVER_DOMAIN', "https://hubkissaiio.local");
-} else {
-// DevCode Ends
+
     define('KISSAI_SERVER_DOMAIN', "https://hub.kissai.io");
-// DevCode Begins
-}
-// DevCode Ends
+
 
 class KissAi_API_Endpoints {
     const SERVER_DOMAIN = KISSAI_SERVER_DOMAIN;
@@ -31,3 +24,4 @@ class KissAi_API_Endpoints {
     const UPDATER = self::SERVER . "/updater/";
     const PLUGIN = self::SERVER . "/plugin/";
 }
+
