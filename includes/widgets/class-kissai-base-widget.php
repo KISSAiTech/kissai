@@ -1,5 +1,15 @@
 <?php
 
+namespace KissAi;
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+use DateTime;
+use DateTimeZone;
+use KissAi\OpenAI_API;
+use KissAi_API;
+use WP_Widget;
+
 class KissAi_Base_Widget extends WP_Widget {
     public const logo = KISSAI_PLUGIN_URL . 'assets/kissai-logo.svg';
     public const delete_icon = '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.556 4a1 1 0 0 0-.97.751l-.292 1.14h5.421l-.293-1.14A1 1 0 0 0 13.453 4h-2.897Zm6.224 1.892-.421-1.639A3 3 0 0 0 13.453 2h-2.897A3 3 0 0 0 7.65 4.253l-.421 1.639H4a1 1 0 1 0 0 2h.1l1.215 11.425A3 3 0 0 0 8.3 22h7.4a3 3 0 0 0 2.984-2.683l1.214-11.425H20a1 1 0 1 0 0-2h-3.22Zm1.108 2H6.112l1.192 11.214A1 1 0 0 0 8.3 20h7.4a1 1 0 0 0 .995-.894l1.192-11.214ZM10 10a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0v-5a1 1 0 0 1 1-1Zm4 0a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0v-5a1 1 0 0 1 1-1Z" clip-rule="evenodd"></path></svg>';
@@ -31,7 +41,182 @@ class KissAi_Base_Widget extends WP_Widget {
     public function __construct($id_base, $name, $widget_options = array(), $control_options = array()) {
         parent::__construct($id_base, $name, $widget_options, $control_options);
     }
+    public static function get_allowed_svg_html() {
+        $allowed_html = [
+            'svg' => [
+                'xmlns'        => true,
+                'width'        => true,
+                'height'       => true,
+                'fill'         => true,
+                'viewbox'      => true,
+                'style'        => true,
+                'class'        => true,
+                'stroke'       => true,
+                'stroke-width' => true,
+                'aria-hidden'  => true,
+                'role'         => true,
+                'focusable'    => true,
+            ],
+            'path' => [
+                'fill-rule'    => true,
+                'clip-rule'    => true,
+                'fill'         => true,
+                'd'            => true,
+                'stroke'       => true,
+                'stroke-width' => true,
+            ],
+            'g' => [
+                'transform' => true,
+                'style'     => true,
+            ],
+            'text' => [
+                'style' => true,
+                'y'     => true,
+                'x'     => true,
+            ],
+            'circle' => [
+                'cx'           => true,
+                'cy'           => true,
+                'r'            => true,
+                'stroke'       => true,
+                'fill'         => true,
+                'style'        => true,
+                'stroke-width' => true,
+            ]
+        ];
+        return $allowed_html;
+    }
+    public static function get_allowed_form_html() {
+        $allowed_html = [
+            'form' => [
+                'id'     => true,
+                'method' => true,
+                'action' => true,
+                'class'  => true,
+                'style'  => true,
+            ]
+        ];
+        return $allowed_html;
+    }
 
+
+    /**
+     * Return the full list of tags / attributes we output in this widget so
+     * wp_kses() can keep them while still stripping anything unexpected.
+     */
+    public static function get_allowed_html() {
+        $allowed_html = [
+            // structural --------------------------------------------------------
+            'p'     => [ 'class'=>true, 'style'=>true ],
+            'h2'    => [],
+            'h3'    => [ 'class'=>true ],
+            'h4'    => [],
+            'b'     => [],
+            'hr'    => [],
+            'label' => [ 'for'=>true, 'class'=>true ],
+
+            'div'  => [
+                'id'        => true,
+                'class'     => true,
+                'style'     => true,
+            ],
+
+            'span' => [
+                'id'        => true,
+                'class'     => true,
+                'style'     => true,
+                'data-guid' => true,
+            ],
+            'br'   => [],
+
+            // form fields ------------------------------------------------------
+            'input' => [
+                'id'          => true,
+                'type'        => true,
+                'name'        => true,
+                'value'       => true,
+                'class'       => true,
+                'placeholder' => true,
+                'required'    => true,
+                'data-index'  => true,
+                'data-file-id'=> true,
+            ],
+
+            'textarea' => [
+                'id'          => true,
+                'name'        => true,
+                'rows'        => true,
+                'cols'        => true,
+                'class'       => true,
+                'placeholder' => true,
+                'required'    => true,
+                'style'       => true,
+            ],
+
+            'select'  => [ 'name'=>true, 'id'=>true, 'class'=>true ],
+
+            'option'  => [ 'value'=>true, 'selected'=>true ],
+
+            // links & buttons --------------------------------------------------
+            'a'     => [
+                'id'             => true,
+                'title'          => true,
+                'rel'            => true,
+                'href'           => true,
+                'class'          => true,
+                'target'         => true,
+                'data-file-id'   => true,
+                'data-thread-id' => true,
+                'data-sort'      => true,
+                'data-offset'    => true,
+                'data-user-email'=> true,
+                'data-file-name' => true,
+                'data-index'     => true,
+            ],
+            'button' => [
+                'id'        => true,
+                'name'      => true,
+                'class'     => true,
+                'type'      => true,
+                'value'     => true,
+                'data-index'=> true,
+            ],
+
+            // tables -----------------------------------------------------------
+            'table' => [ 'class' => true ],
+            'thead' => [],
+            'tbody' => [],
+            'tr'    => [
+                'class'         => true,
+                'data-thread-id'=> true,
+                'data-offset'   => true,
+                'data-index'    => true
+            ],
+            'th'    => [ 'class'=>true, 'style'=>true ],
+            'td'    => [ 'class'=>true, 'style'=>true ],
+
+            // dropdown list ----------------------------------------------------
+            'ul'    => [ 'data-sort' => true, 'class' => true ],
+            'li'      => [
+                'class'        => true,
+                'data-file-id' => true,
+                'data-index'   => true,
+            ],
+
+            // inline style / script blocks ------------------------------------
+            // (WP.org allows them when output is fully controlled by the plugin)
+            'style'  => [ 'type' => true ],
+            'script' => [ 'type' => true ],
+        ];
+
+        // add SVG + PATH whitelist from the base‑class helper
+        $allowed_html = array_merge( $allowed_html, self::get_allowed_svg_html() );
+
+        /* merge <form> whitelist from helper ---------------------------------*/
+        $allowed_html = array_merge( $allowed_html, self::get_allowed_form_html() );
+
+        return $allowed_html;
+    }
     protected static function _convert_to_pascal_case($input) {
         return implode('_', array_map('ucfirst', explode('_', $input)));
     }
@@ -90,8 +275,9 @@ class KissAi_Base_Widget extends WP_Widget {
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo $args['before_widget'];
         if (!empty($instance['title'])) {
-            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-            echo $args['before_title'] . apply_filters('widget_title', $instance['title']) . $args['after_title'];
+            $output = $args['before_title'] . apply_filters('widget_title', $instance['title']) . $args['after_title'];
+            $allowed_html = self::get_allowed_html();
+            echo wp_kses( $output, $allowed_html );
         }
 
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -170,7 +356,9 @@ class KissAi_Base_Widget extends WP_Widget {
         return preg_replace('/####\s*(.+?)\<br\>/s', '<h4>$1</h4><br>', $text);
     }
     public static function format_reference_text($text) {
-        return preg_replace('/【.+?】/', '', $text);
+        $result = preg_replace('/【.+?】/', '', $text);
+        $result = preg_replace('/.+?/', '', $result);
+        return preg_replace('/\s*\([ ,]*\)\s*/', '', $result);
     }
     public static function format_h_text($text) {
         $text = self::format_h4_text($text);
@@ -353,9 +541,13 @@ class KissAi_Base_Widget extends WP_Widget {
             $thread_id = null;
         }
 
+        // $table_names in KissAi_DB class is built inside KissAi_DB_Tables from $wpdb->prefix.
+        // It never contains user input.
+        $table = $kissai_db->table_names->messages;
+
         // Simplified SQL query to fetch both 'sent' and 'received' messages
         $query = "SELECT m1.call_nonce, m1.message_content, m1.message_data, m1.message_type, m1.created_at
-          FROM {$kissai_db->table_names->messages} AS m1
+          FROM `{$table}` AS m1
           WHERE m1.message_type IN (%s, %s)
           AND m1.thread_id = %s AND (m1.utility_message IS NULL OR m1.utility_message = 0)";
 
@@ -508,9 +700,8 @@ class KissAi_Base_Widget extends WP_Widget {
         // Sanitize using wp_kses + the allowed tags
         if ($echo) {
             echo wp_kses($msg, $allowed_tags);;
-        } else {
-            return $msg;
         }
+        return $msg;
     }
 
     public static function execute_method_from_string($methodString, ...$params) {
@@ -537,14 +728,13 @@ class KissAi_Base_Widget extends WP_Widget {
     }
 
     public static function widget_atts_from_ajax($atts) {
-        // Nonce verification is performed elsewhere; explicitly disabling warning.
-        // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+        check_ajax_referer('kissai_nonce', 'nonce');
+
         if (isset($_POST['kissai_widget_atts'])) {
-            $encoded_atts = sanitize_text_field($_POST['kissai_widget_atts']);
+            $encoded_atts = sanitize_text_field(wp_unslash($_POST['kissai_widget_atts']));
             $json_atts = base64_decode($encoded_atts);
             $atts = json_decode($json_atts, true);
         }
-        // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
         return $atts;
     }
     
@@ -561,22 +751,22 @@ class KissAi_Base_Widget extends WP_Widget {
                 url: kissai_vars.ajax_url,
                 data: {
                     action: 'reset_kissai_vars_nonce',
-                    qualifier: '{$temp_nonce}'
+                    temp_nonce: '{$temp_nonce}'
                 },
                 success: function(response) {
                     kissai_vars.nonce = response.data.new_nonce;
                 }
             });";
-            strtr($script, array ( ' ' => '', '\r' => '', '\n' => ''));
+            $script = strtr($script, array ( ' ' => '', '\r' => '', '\n' => ''));
         }
         return $script;
     }
 
+// DevCode Begins
     public static function reset_kissai_vars_nonce() {
         // We use a custom transient-based token, so standard WP Nonce verification is intentionally bypassed.
-        // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
-        if (isset($_POST['qualifier'])) {
-            $nonce = sanitize_text_field($_POST['qualifier']);
+        if (isset($_POST['temp_nonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_POST['temp_nonce']));
             $kissai_api = KissAi_API::getInstance();
             if ($kissai_api === null) {
                 wp_send_json_error('API Key required.');
@@ -596,7 +786,7 @@ class KissAi_Base_Widget extends WP_Widget {
         }
         // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
     }
-
+// DevCode Ends
     public static function encode_attributes($atts, $esc = false) {
         // Convert attributes to JSON
         $json_atts = json_encode($atts);

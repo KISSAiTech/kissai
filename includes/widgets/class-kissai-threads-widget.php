@@ -1,4 +1,12 @@
 <?php
+
+namespace KissAI;
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+use KissAi_API_Endpoints;
+use ReflectionClass;
+
 require_once plugin_dir_path( __FILE__ ) . 'class-kissai-base-widget.php';
 
 class KissAi_Threads_Widget extends KissAi_Base_Widget {
@@ -15,7 +23,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
         );
         $base_url = self::get_kissai_widget_path(); // Go up two levels from current directory
 
-        $plugin_version = get_kissai_plugin_version();
+        $plugin_version = kissai_get_plugin_version();
         wp_enqueue_script(
             'kissai-threads-script', 
             $base_url . 'assets/js/threads.js', 
@@ -71,7 +79,8 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
         $atts = self::get_kissai_shortcode_atts($instance);
         // Widget content
         $body = self::kissai_shortcode($atts);
-        echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        $allowed_html = self::get_allowed_html();
+        echo wp_kses( $body, $allowed_html );
         wp_enqueue_style('kissai-threads-style');
     }
 
@@ -85,7 +94,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
 
     public static function render_kissai_threads($atts = null) {
         if (!current_user_can('manage_options')) {
-            return;
+            return "";
         }
         $content = '<div class="wrap">';
         $content .= '<div id="kissai-thread-container" style="display: flex;">'; // Flex container
@@ -161,15 +170,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
         return $html;
     }
 
-    public static function render_upgrade_link() {
-        $html = '';
-        $html .= '<script>';
-        $html .= 'jQuery(document).ready(function($) {';
-        $html .= "init_open_page_button('.open-upgrade-page', '/my-account/#plan');";
-        $html .= '});';
-        $html .= '</script>';
-        return $html;
-    }
+
 
     public static function render_dropdown_menu($array, $css_id = '', $css_class = '') {
         // Get the first key of the array
@@ -234,7 +235,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
         $thread_header = isset($atts['thread_list_header']) ? $atts['thread_list_header'] : "";
 
         $thread_header_content = '';
-        $thread_header_content .= self::generate_sort_order_css('KissAi_Thread_SortOrder');
+        $thread_header_content .= self::generate_sort_order_css('KissAi\KissAi_Thread_SortOrder');
         global $kissai_api;
         $permitted = true;
 
@@ -253,7 +254,7 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
         $html = self::render_kissai_thread_list_begin($thread_header_content);
         $html .= self::render_kissai_thread_list_body($assistant_id, $offset, $limit, KissAi_Thread_SortOrder::newer, '');
         $html .= self::render_kissai_thread_list_end();
-        $html .= self::render_upgrade_link();
+
         $html .= '<input type="hidden" name="current_page" value="' . '"/>';
         $html .= '<input type="hidden" name="page_limit" value="' . '"/>';
         $html .= '<div class="message"></div>';
@@ -287,15 +288,13 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
             : '#threads-container .thread-list tbody';
 
 
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        $raw_target_type = isset($_POST['target_type']) ? wp_unslash( $_POST['target_type'] ) : '';
-        $target_type = sanitize_text_field($raw_target_type) === 'replace'
+        $raw_target_type = isset($_POST['target_type']) ? sanitize_text_field(wp_unslash( $_POST['target_type'] )) : '';
+        $target_type = $raw_target_type === 'replace'
             ? 'replace'
             : 'container';
 
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        $raw_sort_order = isset($_POST['sort_order']) ? wp_unslash( $_POST['sort_order'] ) : '';
-        $sort_order = (sanitize_text_field($raw_sort_order) === KissAi_Thread_SortOrder::newer)
+        $raw_sort_order = isset($_POST['sort_order']) ? sanitize_text_field( wp_unslash( $_POST['sort_order'] ) ) : '';
+        $sort_order = ($raw_sort_order === KissAi_Thread_SortOrder::newer)
             ? KissAi_Thread_SortOrder::newer
             : KissAi_Thread_SortOrder::older;
 
@@ -370,10 +369,10 @@ class KissAi_Threads_Widget extends KissAi_Base_Widget {
 
 add_shortcode('kissai_threads', [KissAi_Threads_Widget::class, 'kissai_shortcode']);
 
-function register_kissai_threads_widget() {
-    register_widget('KissAi_Threads_Widget');
+function kissai_register_threads_widget() {
+    register_widget('\KissAi\KissAi_Threads_Widget');
 }
-add_action('widgets_init', 'register_kissai_threads_widget');
+add_action('widgets_init', '\KissAi\kissai_register_threads_widget');
 
 add_action('wp_ajax_load_kissai_threads', [KissAi_Threads_Widget::class, 'load_kissai_threads']);
 add_action('wp_ajax_nopriv_load_kissai_threads', [KissAi_Threads_Widget::class, 'load_kissai_threads']);

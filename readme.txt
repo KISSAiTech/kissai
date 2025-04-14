@@ -5,7 +5,7 @@ Tags: AI, OpenAI, GPT, Assistant, Custom Training
 Requires at least: 5.0
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.7.93
+Stable tag: 1.7.97
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,35 @@ The plugin offers **custom assistant creation**, allowing users to upload **know
 - **Shortcode Integration**: Embed AI assistants easily using shortcodes (`[kissai_chat_widget]`) or visual page editors like Elementor or AVADA.
 - **Custom Logging and Usage Stats**: Records conversation usage and logs for easier troubleshooting and usage reporting.
 - **Data Privacy and Security**: Securely manages API keys and user data, respecting best practices for privacy and security.
+
+Below is an updated **External Services** section that incorporates details of the **KissAi Service** endpoints:
+
+== External services ==
+
+This plugin relies on **two** external services for its AI functionality:
+
+1. **hub.kissai.io (KissAi Service)**
+   - **What**: KissAi’s own API endpoint, `https://hub.kissai.io`, which provides various services including user registration/login, assistant creation, knowledge file storage, token usage tracking, and model listings.
+   - **Data Sent**: Depending on your settings and usage, the plugin may send user registration details (e.g., email, name), and usage metrics to `hub.kissai.io`. This data is necessary for AI processing, building and updating AI knowledge bases, and tracking usage stats.
+   - **When**: Data is transmitted whenever:
+     - You or site visitors interact with an AI assistant (e.g. sending prompts or retrieving conversation logs).
+     - Administrators create or train new assistants, update assistants, upload knowledge files, or check usage.
+     - A user registers or logs in through the plugin.
+   - **Why**: These operations are required for providing real-time AI responses, custom knowledge-based answers, user account management, model information, and usage metrics.
+   - **Terms & Privacy**:
+     - Terms of Service: https://hub.kissai.io/terms
+     - Privacy Policy: https://hub.kissai.io/privacy
+
+2. **OpenAI API**
+   - **What**: OpenAI’s API endpoints for GPT-3.5, GPT-4, and other supported models.
+   - **Data Sent**: The plugin will send user queries/prompts, conversation snippets, or knowledge data to OpenAI for generating responses.
+   - **When**: Data is transmitted to OpenAI each time the assistant processes a prompt, or when you upload knowledge files.
+   - **Why**: Needed to use OpenAI as the AI model for generating chat responses.
+   - **Terms & Privacy**:
+     - Terms of Use: https://openai.com/policies/terms-of-use
+     - Privacy Policy: https://openai.com/policies/privacy-policy
+
+Please review each service’s Terms and Privacy Policy if you have concerns or questions about how your data is processed.
 
 == Installation ==
 
@@ -53,7 +82,7 @@ Navigate to **KissAi > Assistants > Add New** and upload knowledge files to trai
 Yes, you can create and configure multiple AI assistants under **KissAi > Assistants** in the WordPress admin panel, each with separate knowledge files.
 
 = What AI models does KissAi Widget support? =
-Currently, KissAi supports OpenAI’s **GPT-3.5** and **GPT-4** models, with future updates including **Grok**, **Claude** and **Gemini**.
+Currently, KissAi supports OpenAI’s **GPT-3.5** and **GPT-4** models, with future updates including **Grok**, **Claude**, and **Gemini**.
 
 = How do I display my AI assistant on my website? =
 Use the shortcode `[kissai_chat assistant_id="asst_xxxxxxxxxxxxxxxxxxxxxxxx"]` to embed the assistant on any page or post. It also integrates with **Elementor** and **AVADA**.

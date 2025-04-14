@@ -1,8 +1,11 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+use KissAi\OpenAI_API;
 
 class KissAi_Admin_Elements {
     public static function init() {
-        $plugin_version = get_kissai_plugin_version();
+        $plugin_version = kissai_get_plugin_version();
         wp_enqueue_style(
             'kissai-admin-elements',
             KISSAI_PLUGIN_URL . 'assets/css/kissai-admin-elements.css',
@@ -19,34 +22,34 @@ class KissAi_Admin_Elements {
     }
 
     public static function get_allowed_html() {
-        $allowed_html = array(
-            'table' => array(
+        $allowed_html = [
+            'table' => [
                 'class'       => true,
                 'cellspacing' => true,
-            ),
-            'thead' => array(),
-            'tbody' => array(),
-            'tr' => array(),
-            'th' => array(
+            ],
+            'thead' => [],
+            'tbody' => [],
+            'tr' => [],
+            'th' => [
                 'style' => true,
                 'class' => true,
-            ),
-            'td' => array(
+            ],
+            'td' => [
                 'class' => true,
-            ),
-            'a' => array(
+            ],
+            'a' => [
                 'href'             => true,
                 'data-assistant-id'=> true,
                 'data-action'      => true,
                 'class'            => true,
-            ),
-            'span' => array(),
-            'input' => array(
+            ],
+            'span' => [],
+            'input' => [
                 'type'  => true,
                 'name'  => true,
                 'value' => true,
-            ),
-        );
+            ],
+        ];
         return $allowed_html;
     }
     public static function render_assistant_list($button_class, $button_text, $ajax_function = null, $js_ajax_before_send = null, $js_ajax_success_code = null, $js_after_button_click = null, $echo = true) {

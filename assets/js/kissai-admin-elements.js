@@ -113,7 +113,7 @@ function edit_assistant_handler(response) {
     } else {
         form.find('table.form-table tbody').append('<tr class="delete-button-row"><td></td><td><input type="submit" name="delete" class="button-red" value="Delete Assistant"></td></tr>');
     }
-    form.find('input[type="hidden"][name="action"]').val('update_assistant');
+    form.find('input[type="hidden"][name="action"]').val('kissai_update_assistant');
     form.find('input[type="submit"][name="submit"]').val('Update');
     form.find('select[name="model_id"]').val(response.data.model);
     form.find('input[type="submit"][name="delete"]').on('click', function(e) {
@@ -121,7 +121,7 @@ function edit_assistant_handler(response) {
             e.preventDefault();
             return;
         }
-        form.find('input[type="hidden"][name="action"]').val('delete_assistant');
+        form.find('input[type="hidden"][name="action"]').val('kissai_delete_assistant');
     });
     form.find('input[type="hidden"][name="import_action"]').val('export');
     form.find('custom-notice').fadeOut();
@@ -143,7 +143,7 @@ function init_export_button() {
 
         // Build FormData
         var formData = new FormData();
-        formData.append('action', 'export_assistant');
+        formData.append('action', 'kissai_export_assistant');
         formData.append('nonce', kissai_vars.nonce);
         formData.append('assistant_id', assistantId);
 
@@ -200,7 +200,7 @@ function init_import_button() {
         // Create a FormData object for AJAX
         var formData = new FormData();
         // The WP AJAX action
-        formData.append('action', 'import_assistant');
+        formData.append('action', 'kissai_import_assistant');
         // If you have a security nonce in your localized JS (kissai_vars.nonce)
         formData.append('nonce', kissai_vars.nonce);
 
@@ -246,7 +246,7 @@ function init_cancel_button() {
     var form = $('form.assistant_edit');
     form.find('input[name="cancel"]').on('click', function(e) {
         e.preventDefault(); // Prevent default button click behavior
-        form.find('input[type="hidden"][name="action"]').val('add_assistant');
+        form.find('input[type="hidden"][name="action"]').val('kissai_add_assistant');
         form.find('input[type="submit"][name="submit"]').val('Add');
         form.find('tr.delete-button-row').remove();
         form.find('input[name="export_assistant_btn"]').hide();

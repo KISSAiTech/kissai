@@ -6,18 +6,28 @@
  * phpcs:ignoreFile WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
  */
 
+namespace KissAi;
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+use WP_Error;
+use ZipArchive;        // for export logic
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use FilesystemIterator;
+
 class KissAi_DB_Tables {
     public const DB_VERSION = '1.5.9';
-    public $table_prefix;
-    public $threads;
-    public $messages;
-    public $assistants;
-    public $assistant_settings;
-    public $assistant_knowledges;
-    public $run_thread;
-    public $api_call_nonce;
-    public $api_call_run_temp_data;
-    public $api_log;
+    public string $table_prefix;
+    public string $threads;
+    public string $messages;
+    public string $assistants;
+    public string $assistant_settings;
+    public string $assistant_knowledges;
+    public string $run_thread;
+    public string $api_call_nonce;
+    public string $api_call_run_temp_data;
+    public string $api_log;
     public function __construct() {
         global $wpdb;
         $this->table_prefix = $wpdb->prefix . 'kissai_';
@@ -36,11 +46,12 @@ class KissAi_DB_Tables {
 class KissAi_DB {
     public const default_thread_list_page_size = 10;
     public const max_saved_suggested_questions = 50;
-    public $table_names;
+    public KissAi_DB_Tables $table_names;
     public function __construct() {
         $this->table_names = new KissAi_DB_Tables();
     }
-    public function create_plugin_database_tables() {
+    public function create_plugin_database_tables(): void
+    {
         global $wpdb;
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
@@ -153,8 +164,9 @@ class KissAi_DB {
         }
     }
 
-    public static function is_db_up_to_date() {
-        $installed_ver = get_kissai_option('db_version');
+    public static function is_db_up_to_date(): bool
+    {
+        $installed_ver = kissai_get_option('db_version');
         if ($installed_ver == KissAi_DB_Tables::DB_VERSION) {
             return true;
         }
@@ -177,7 +189,7 @@ class KissAi_DB {
 
         global $kissai_db;
         $kissai_db->create_plugin_database_tables();
-        $installed_ver = get_kissai_option('db_version');
+        $installed_ver = kissai_get_option('db_version');
         if ($installed_ver < '1.5') {
             $kissai_db->update_all_messages_assistant_ids();
         }
@@ -186,13 +198,13 @@ class KissAi_DB {
         }
         if ($installed_ver < '1.5.9') {
             $openai_api_key = get_option('openai_api_key');
-            update_kissai_option('openai_api_key', $openai_api_key);
+            kissai_update_option('openai_api_key', $openai_api_key);
             delete_option('openai_api_key');
             $api_key_type = get_option('api_key_type');
-            update_kissai_option('api_key_type', $api_key_type);
+            kissai_update_option('api_key_type', $api_key_type);
             delete_option('api_key_type');
         }
-        update_kissai_option('db_version', KissAi_DB_Tables::DB_VERSION);
+        kissai_update_option('db_version', KissAi_DB_Tables::DB_VERSION);
 
         add_action('admin_notices', [KissAi_DB::class, 'update_success_notice']);
     }
@@ -200,7 +212,11 @@ class KissAi_DB {
     public static function update_db_notice($class = null) {
         if ($class == null)
             $class = "notice notice-warning";
-        $current_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+        $protocol = (isset($_SERVER['HTTPS']) && sanitize_text_field( wp_unslash( $_SERVER['HTTPS'] ) ) === 'on') ? "https" : "http";
+        $host = isset($_SERVER['HTTP_HOST']) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+        $current_url = esc_url_raw( $protocol . "://" . $host . $request_uri );
+
         $update_url = add_query_arg(array(
             'kissai_db_update' => 'true',
             'kissai_nonce' => wp_create_nonce('kissai_db_update_nonce')
@@ -220,9 +236,11 @@ class KissAi_DB {
     }
 
     public static function handle_db_update() {
-        if (isset($_GET['kissai_db_update']) && $_GET['kissai_db_update'] === 'true') {
+        $db_update = isset($_GET['kissai_db_update']) ? sanitize_text_field( wp_unslash( $_GET['kissai_db_update'] ) ) : '';
+        if ($db_update === 'true') {
+            $nonce = isset($_GET['kissai_nonce']) ? sanitize_text_field( wp_unslash( $_GET['kissai_nonce'] ) ) : '';
             // Security checks: Nonce verification and user capability check
-            if (!isset($_GET['kissai_nonce']) || !wp_verify_nonce($_GET['kissai_nonce'], 'kissai_db_update_nonce') || !current_user_can('manage_options')) {
+            if ( empty($nonce) || !wp_verify_nonce($nonce, 'kissai_db_update_nonce') || !current_user_can('manage_options') ) {
                 wp_die('You do not have permission to perform this action.');
             }
 
@@ -234,6 +252,7 @@ class KissAi_DB {
             add_action('admin_notices', [KissAi_DB::class, 'update_success_notice']);
         }
     }
+
 
     public function reset_plugin_database_tables() {
         global $wpdb;
@@ -269,8 +288,7 @@ class KissAi_DB {
             $where = array(
                 'thread_id' => $thread_id
             );
-            $updated = $wpdb->update($table_name, $data, $where);
-            return $updated;
+            return $wpdb->update($table_name, $data, $where);
         }
         return false;
     }
@@ -295,8 +313,8 @@ class KissAi_DB {
     }
 
     public static function get_current_api_key_type() {
-        $api_key_type = get_kissai_option('api_key_type', 'kissai');
-        $openai_api_key = get_kissai_option('openai_api_key');
+        $api_key_type = kissai_get_option('api_key_type', 'kissai');
+        $openai_api_key = kissai_get_option('openai_api_key');
         if ($api_key_type === 'openai' && empty($openai_api_key)) {
             return 'openai';
         }
@@ -416,7 +434,6 @@ class KissAi_DB {
         } else {
             return kissai_error_log("update_all_thread_assistant_ids() - No threads found in messages table.");
         }
-        return false;
     }
 
     public function update_all_messages_assistant_ids() {
@@ -462,7 +479,6 @@ class KissAi_DB {
         } else {
             return kissai_error_log("update_all_messages_assistant_ids() - No messages found in messages table.");
         }
-        return false;
     }
 
     public function update_all_messages_api_server($api_server) {
@@ -584,7 +600,7 @@ class KissAi_DB {
         $data = array(
             'call_nonce' => $guid,
             'assistant_id' => $assistant_id,
-            'thread_id' => $thread_id === null ? null : (isset($message_array['thread_id']) ? $message_array['thread_id'] : $thread_id), // Use thread_id from the message if available
+            'thread_id' => $thread_id === null ? null : ($message_array['thread_id'] ?? $thread_id), // Use thread_id from the message if available
             'message_id' => $message_array['id'],
             'message_type' => $message_type,
             'message_content' => $message_text,
@@ -686,6 +702,7 @@ class KissAi_DB {
                 return false;
             }
         }
+        return false;
     }
 
     public function get_event_max_seq($nonce, $eventName) {
@@ -737,7 +754,6 @@ class KissAi_DB {
         global $wpdb, $kissai_db;
 
         $table_name = $kissai_db->table_names->api_call_run_temp_data;
-        $result = null;
         $result = $wpdb->delete(
             $table_name,
             ['call_nonce' => $nonce, 'event' => $eventName], // WHERE
@@ -842,20 +858,18 @@ class KissAi_DB {
      * @param string $name The name of the file to search for.
      * @return int|null Returns the ID of the knowledge entry if found, null otherwise.
      */
-    public function find_knowledge_id_by_assistant_and_name($assistant_id, $name) {
+    public function find_knowledge_id_by_assistant_and_name( $assistant_id, $name ) {
         global $wpdb;
 
-        $id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$this->table_names->assistant_knowledges} WHERE assistant_id = %s AND name = %s",
+        $table = esc_sql( $this->table_names->assistant_knowledges ); // sanitize table name
+
+        $sql   = $wpdb->prepare(
+            "SELECT id FROM `{$table}` WHERE assistant_id = %s AND name = %s",
             $assistant_id,
             $name
-        ));
+        );
 
-        if ($id) {
-            return (int) $id;  // Return the ID as an integer if found
-        } else {
-            return null;  // Return null if no matching record is found
-        }
+        return (int) $wpdb->get_var( $sql ) ?: null;
     }
 
     /**
@@ -1146,7 +1160,7 @@ class KissAi_DB {
 
         // Clean up temp folder if you want
         // If you keep it, remove at some scheduled event
-        // $this->rrmdir($tmp_folder); // A custom function to recursively remove a dir
+        $this->rrmdir($tmp_folder); // A custom function to recursively remove a dir
 
         // Return the path. You might convert to a URL for direct download:
         // $final_url = trailingslashit($export_dir['baseurl']) . 'kissai_exports/' . $zip_filename;
@@ -1435,74 +1449,118 @@ class KissAi_DB {
         return $where_clause;
     }
 
-    private static function get_threads_list_where_clause_params($assistant_id, $search = '') {
+    /***********************************************************************
+     * get_threads_list_where_clause_params()
+     *
+     * •  All user‑controlled values ($assistant_id, $search terms) are
+     *    converted to %s placeholders and pushed into $params.
+     * •  The function returns two things:
+     *        [ 'sql'    => ' WHERE m.assistant_id = %s AND … ',
+     *          'params' => [ $assistant_id, '%foo%', '%bar%' ] ]
+     *    so the caller can pass *both* pieces to $wpdb->prepare().
+     * •  The “utility_message” condition is a static string, not user input.
+     **********************************************************************/
+    private static function get_threads_list_where_clause_params(
+        $assistant_id,
+        $search = '',
+        $exclude_utility = true        // ← new flag
+    ) {
         global $wpdb;
 
         $where_fragments = [];
-        $params = [];
+        $params          = [];
 
-        if (!empty($assistant_id)) {
+        if ( ! empty( $assistant_id ) ) {
             $where_fragments[] = 'm.assistant_id = %s';
-            $params[] = $assistant_id;
+            $params[]          = $assistant_id;
         }
 
-        // If search is provided, process it and add placeholders
-        if (!empty($search)) {
+        if ( $search !== '' ) {
             // Suppose we build fragments like `m.message_content LIKE %s` for each term
             // and accumulate them in $search_fragments.
             // Then we combine them with OR, for instance:
             $search_fragments = [];
-            preg_match_all('/"([^"]+)"|(\S+)/', $search, $matches);
+            preg_match_all( '/"([^"]+)"|(\S+)/', $search, $matches );
 
-            foreach ($matches[0] as $term) {
-                if (strpos($term, '"') === 0) {
-                    $term = trim($term, '"');
+            foreach ( $matches[0] as $term ) {
+                if ( $term[0] === '"' ) {
+                    $term = trim( $term, '"' );
                 }
                 $search_fragments[] = 'm.message_content LIKE %s';
-                $params[] = '%' . $wpdb->esc_like($term) . '%';
+                $params[]           = '%' . $wpdb->esc_like( $term ) . '%';
             }
 
-            // Combine them with parentheses and OR
-            if (!empty($search_fragments)) {
-                $where_fragments[] = '(' . implode(' OR ', $search_fragments) . ')';
+            if ( $search_fragments ) {
+                $where_fragments[] = '(' . implode( ' OR ', $search_fragments ) . ')';
             }
         }
 
-        // Always exclude utility_message
-        $where_fragments[] = '(m.utility_message IS NULL OR m.utility_message = 0)';
-
-        // Build the final WHERE clause piece
-        $where_sql = '';
-        if (!empty($where_fragments)) {
-            $where_sql = ' WHERE ' . implode(' AND ', $where_fragments);
+        /***********************************************************************
+         * Constant SQL fragments
+         *
+         * The clauses below are hard‑coded, never influenced by user input,
+         * and therefore safe to concatenate:
+         *
+         *     '(m.utility_message IS NULL OR m.utility_message = 0)'
+         **********************************************************************/
+        if ( $exclude_utility ) {
+            $where_fragments[] = '(m.utility_message IS NULL OR m.utility_message = 0)';
         }
 
-        // Return both pieces
+        $where_sql = $where_fragments ? ' WHERE ' . implode( ' AND ', $where_fragments ) : '';
+
         return [
             'sql'    => $where_sql,
-            'params' => $params
+            'params' => $params,
         ];
     }
 
-    public function count_threads_list_items($assistant_id, $search = '') {
+
+// DevCode Begins
+//    public function count_threads_list_items($assistant_id, $search = '') {
+//        global $wpdb;
+//        $messages_table = $this->table_names->messages;
+//
+//        $query = "SELECT COUNT(DISTINCT m.thread_id) as count FROM {$messages_table} m";
+//
+//        // Get the where clause and parameters
+//        $where_data    = self::get_threads_list_where_clause_params($assistant_id, $search);
+//        $where_sql     = $where_data['sql'];
+//        $where_params  = $where_data['params'];
+//
+//        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Our $where_sql is safe, prepared below.
+//        $query .= $where_sql;
+//
+//        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- We call $wpdb->prepare() on $query below.
+//        return $wpdb->get_var( $wpdb->prepare( $query, $where_params ) );
+//    }
+// DevCode Ends
+
+    public function count_threads_list_items( $assistant_id, $search = '' ) {
         global $wpdb;
-        $messages_table = $this->table_names->messages;
+        $table = esc_sql( $this->table_names->messages ); // sanitise
 
-        $query = "SELECT COUNT(DISTINCT m.thread_id) as count FROM {$messages_table} m";
+        $where = self::get_threads_list_where_clause_params( $assistant_id, $search );
+        $sql   = "SELECT COUNT( DISTINCT m.thread_id ) 
+	          FROM `{$table}` m {$where['sql']}";
 
-        // Get the where clause and parameters
-        $where_data    = self::get_threads_list_where_clause_params($assistant_id, $search);
-        $where_sql     = $where_data['sql'];
-        $where_params  = $where_data['params'];
+        $prepared = $wpdb->prepare( $sql, ...$where['params'] );
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Our $where_sql is safe, prepared below.
-        $query .= $where_sql;
-
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- We call $wpdb->prepare() on $query below.
-        return $wpdb->get_var( $wpdb->prepare( $query, $where_params ) );
+        return (int) $wpdb->get_var( $prepared );
     }
 
-
+    /***********************************************************************
+     * read_threads_list()
+     *
+     * • $where_sql *does* originate from user input ($search), but only
+     *   indirectly: every term is converted to a `%s` placeholder in the
+     *   helper, so the string itself contains *no raw user text* — just
+     *   SQL literals plus placeholders.
+     * • The corresponding escaped values live in $where_params and are
+     *   injected by $wpdb->prepare() alongside the LIMIT/OFFSET ints.
+     *
+     * Therefore the query still meets WP.org guidelines for prepared SQL.
+     **********************************************************************/
     public function read_threads_list(
         $assistant_id,
         $offset = 0,
@@ -1515,44 +1573,35 @@ class KissAi_DB {
         $messages_table = $this->table_names->messages;
 
         // 1) Get the initial WHERE clause & its parameters
-        $clause_data = self::get_threads_list_where_clause_params($assistant_id, $search);
+        $clause_data  = self::get_threads_list_where_clause_params(
+            $assistant_id,
+            $search,
+            ! $include_utility_messages   // pass TRUE when we want them excluded
+        );
         $where_sql   = $clause_data['sql'];
         $where_params = $clause_data['params'];
 
-        // 2) Conditionally exclude utility messages
-        if ( ! $include_utility_messages ) {
-            // If there's no existing WHERE clause, start one
-            if ( stripos($where_sql, 'WHERE') === false ) {
-                $where_sql .= " WHERE (m.utility_message IS NULL OR m.utility_message = 0) ";
-            } else {
-                // Append an additional AND
-                $where_sql .= " AND (m.utility_message IS NULL OR m.utility_message = 0) ";
-            }
-        }
+        // 3) Work out sort order & assemble the full query
+        $table    = esc_sql( $messages_table ); // sanitise table name
+        $order    = ( $sort_order === KissAi_Thread_SortOrder::newer ) ? 'DESC' : 'ASC';
 
-        // 3) Figure out sort order
-        $order = ($sort_order === KissAi_Thread_SortOrder::newer) ? 'DESC' : 'ASC';
-
-        // 4) Build the final query with placeholders
-        // We still have 2 more placeholders for LIMIT and OFFSET, which are always %d
+        // $where_sql is a fully‑prepared, placeholder‑free string.
+        // $table has been run through esc_sql() / whitelisted.
+        // No user input is concatenated after this point.
         $sql = "
-        SELECT m.thread_id,
-               MAX(m.created_at) AS created_at
-          FROM {$messages_table} m
-          $where_sql
-         GROUP BY m.thread_id
-         ORDER BY m.created_at {$order}
-         LIMIT %d OFFSET %d
-    ";
+            SELECT  m.thread_id,
+                    MAX(m.created_at) AS created_at
+            FROM    `{$table}` m
+            {$where_sql}
+            GROUP BY m.thread_id
+            ORDER BY m.created_at {$order}
+            LIMIT   %d OFFSET %d
+        ";
 
-        // 5) Merge the WHERE parameters with the pagination parameters
-        $final_params = array_merge($where_params, [ $limit, $offset ]);
+        // Merge WHERE‑clause args with pagination args, then spread into prepare()
+        $prepared   = $wpdb->prepare( $sql, ...array_merge( $where_params, [ $limit, $offset ] ) );
 
-        // 6) Prepare and execute
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-        $threads = $wpdb->get_results($wpdb->prepare($sql, $final_params));
-
-        return $threads;
+        return $wpdb->get_results( $prepared );
     }
 
     public function save_suggested_questions($assistant_id, $questions_input, $merge = true, $limit = self::max_saved_suggested_questions)

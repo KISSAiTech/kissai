@@ -1,4 +1,11 @@
 <?php
+namespace KissAi;
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+use Exception;
+use stdClass;
+
 class OpenAI_Endpoints {
     const server = "https://api.openai.com/v1/";
     const models = self::server . "models";
@@ -138,6 +145,7 @@ class OpenAI_API {
                 return $files;
             }
         }
+        return null;
     }
 
     public function delete_vector_store_file($file_id, $vector_store_id = null) {
@@ -910,7 +918,7 @@ class OpenAI_API {
     
             // First, check if the request itself failed
             if (is_wp_error($response)) {
-                kissai_error_log( 'Error: update assistant (' . $this->assistant_id . "): sent: " . $sent . " | " . $response->get_error_message());
+                kissai_error_log( 'Error: update assistant (' . $this->assistant_id . "): sent: " . json_encode($sent) . " | " . $response->get_error_message());
                 return false; // Or handle the error as needed
             }
     
@@ -1065,15 +1073,19 @@ class OpenAI_API {
             $event_data = $data;
         } elseif (is_array($data) && isset($data['object']) && $data['object'] === 'thread.run' && isset($data['usage'])) {
             // Convert array to stdClass object
-            $event_data = json_decode(json_encode($data));
+            $event_data = json_decode(kissai_json_encode($data));
+
         } else {
             // Assume $data is a JSON string and decode it into stdClass
             $event_data = json_decode($data);
+
             if (json_last_error() !== JSON_ERROR_NONE || !isset($event_data->object) || $event_data->object !== 'thread.run') {
                 kissai_error_log("update_token_usage: Failed to decode JSON data or invalid format");
                 return false;
             }
         }
+
+        $model_id = $event_data->model ?? '';
 
         // Extract usage data
         $usage = $event_data->usage ?? null;
@@ -1113,7 +1125,7 @@ class OpenAI_API {
         $kissai_user_id = $kissai_api->get_kissai_user_id();
 
         if (!empty($kissai_user_id) && $prompt_tokens !== null && $completion_tokens !== null) {
-            $api_response = $kissai_api->call_update_token_usage($kissai_user_id, $call_nonce, $prompt_tokens, $completion_tokens);
+            $api_response = $kissai_api->call_update_token_usage($kissai_user_id, $call_nonce, $model_id, $prompt_tokens, $completion_tokens);
             $api_key_type = KissAi_DB::get_current_api_key_type();
             if ($api_key_type === 'kissai') {
                 if ($api_response === null) {
@@ -1216,10 +1228,10 @@ class OpenAI_API {
 
         $sent = [
             'headers' => $this->get_header(),
-            'body' => json_encode([
+            'body' => kissai_json_encode([
                 'role' => "tool",
                 'tool_call_id' => $tool_call_id,
-                'content' => json_encode($function_response)
+                'content' => kissai_json_encode($function_response)
             ]),
             'data_format' => 'body',
         ];
@@ -1566,7 +1578,7 @@ class OpenAI_API {
     public static function add_deleted_openai_file_id( $file_id ) {
         // Each file ID gets its own transient key.
         // The transient will store 'true', expiring in 60 seconds.
-        set_transient( "deleted_openai_file_id_{$file_id}", true, 60 );
+        set_transient( "kissai_deleted_openai_file_id_{$file_id}", true, 60 );
     }
 
     /**
@@ -1577,7 +1589,7 @@ class OpenAI_API {
      */
     public static function is_deleted_openai_file_id( $file_id ) {
         // If the transient is still valid, this returns 'true'; otherwise it returns false/empty.
-        return ( get_transient( "deleted_openai_file_id_{$file_id}" ) === true );
+        return ( get_transient( "kissai_deleted_openai_file_id_{$file_id}" ) === true );
     }
 
 }

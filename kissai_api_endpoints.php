@@ -1,5 +1,7 @@
 <?php
 
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
 
     define('KISSAI_SERVER_DOMAIN', "https://hub.kissai.io");
 

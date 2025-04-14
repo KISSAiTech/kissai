@@ -7,40 +7,54 @@ if (!defined('ABSPATH')) {
 require_once( ABSPATH . '/wp-includes/pluggable.php' );
 require_once plugin_dir_path(__FILE__) . 'kissai_api_endpoints.php';
 
+function kissai_admin_register_assets($hook_suffix) {
+    // Suppose you want inline CSS on the “Register” page
+    $inline_css = "
+.verified-text {
+    color: #0073aa;
+    padding: 0 10px;
+}
+td.valign-center {
+    display: flex;
+    align-items: center;
+}
+.upgrade-button-container {
+    padding-left: 30px;
+}
+";
+
+    kissai_register_inline_style($hook_suffix . '-style', [], $inline_css);
+
+    $inline_js = "
+jQuery(document).ready(function($){
+    init_open_page_button('.open-upgrade-page', '/my-account/#plan');
+    init_open_page_button('.open-buy-credit-page', '/my-account/#credit');
+    init_open_page_button('.open-view-transactions-page', '/my-account/#transactions');
+});
+";
+
+    kissai_register_inline_script(
+        $hook_suffix . '-script', // Handle
+        ['jquery'],                      // Dependencies
+        $inline_js,                      // The JS code
+        true                             // Load in the footer
+    );
+}
+
+
 // Define the function to display the register page.
-function display_kissai_register_page() {
+function kissai_display_register_page() {
     wp_enqueue_style('kissai-style');
-    $first_name = get_kissai_option('api_user_first_name');
-    $last_name = get_kissai_option('api_user_last_name');
-    $email = get_kissai_option('api_user_email');
+    $first_name = kissai_get_option('api_user_first_name');
+    $last_name = kissai_get_option('api_user_last_name');
+    $email = kissai_get_option('api_user_email');
     $user = null;
     if ($email) {
         global $kissai_api;
         $user = $kissai_api->get_kissai_user($email);
     }
-    $kissai_api_key = get_kissai_option('api_key');
+    $kissai_api_key = kissai_get_option('api_key');
     ?>
-    <style>
-        .verified-text {
-            color: #0073aa; /* Standard WordPress blue */
-            padding: 0px 10px;
-        }
-        td.valign-center {
-            display: flex;
-            align-items: center;
-        }
-        .upgrade-button-container {
-            padding-left: 30px;
-        }
-    </style>
-    <script>
-        jQuery(document).ready(function($) {
-            init_open_page_button('.open-upgrade-page', '/my-account/#plan');
-            init_open_page_button('.open-buy-credit-page', '/my-account/#credit');
-            init_open_page_button('.open-view-transactions-page', '/my-account/#transactions');
-        });
-
-    </script>
     <form id="kissai_register_form" method="post">
         <div class="wrap">
             <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -188,26 +202,22 @@ function kissai_save_email_ajax() {
 
     if ( isset( $_POST['first_name'] ) ) {
         $first_name = sanitize_text_field( wp_unslash( $_POST['first_name'] ) );
-        update_kissai_option( 'api_user_first_name', $first_name );
+        kissai_update_option( 'api_user_first_name', $first_name );
     }
 
     if ( isset( $_POST['last_name'] ) ) {
         $last_name = sanitize_text_field( wp_unslash( $_POST['last_name'] ) );
-        update_kissai_option( 'api_user_last_name', $last_name );
+        kissai_update_option( 'api_user_last_name', $last_name );
     }
 
     if ( isset( $_POST['email'] ) ) {
-        // Unslash first
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized below
-        $email_raw = wp_unslash( $_POST['email'] );
-        // Then sanitize
-        $email     = sanitize_email( $email_raw );
+        $email = sanitize_email( wp_unslash( $_POST['email'] ) );
 
         // Check if it’s valid
         if ( filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
-            $existing_email = get_kissai_option( 'api_user_email' );
+            $existing_email = kissai_get_option( 'api_user_email' );
             if ( $existing_email !== $email ) {
-                update_kissai_option( 'api_user_email', $email );
+                kissai_update_option( 'api_user_email', $email );
             }
         } else {
             wp_send_json_error( 'Invalid email address.' );
@@ -228,24 +238,21 @@ function kissai_ajax_update_user_details() {
     $data = array();
 
     if ( isset( $_POST['email'] ) ) {
-        // Unslash then sanitize
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized below
-        $email_raw = wp_unslash( $_POST['email'] );
-        $email     = sanitize_email( $email_raw );
+        $email = sanitize_email( wp_unslash( $_POST['email'] ) );
 
         if ( filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
-            update_kissai_option( 'api_user_email', $email );
+            kissai_update_option( 'api_user_email', $email );
             $data['email'] = $email;
 
             if ( isset( $_POST['first_name'] ) ) {
                 $first_name = sanitize_text_field( wp_unslash( $_POST['first_name'] ) );
-                update_kissai_option( 'api_user_first_name', $first_name );
+                kissai_update_option( 'api_user_first_name', $first_name );
                 $data['first_name'] = $first_name;
             }
 
             if ( isset( $_POST['last_name'] ) ) {
                 $last_name = sanitize_text_field( wp_unslash( $_POST['last_name'] ) );
-                update_kissai_option( 'api_user_last_name', $last_name );
+                kissai_update_option( 'api_user_last_name', $last_name );
                 $data['last_name'] = $last_name;
             }
 

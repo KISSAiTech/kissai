@@ -363,6 +363,8 @@ function formatMarkupText(text) {
     newHtml = newHtml.replace(/###\s*(.+?)\n/g, '<h3>$1</h3>');
     newHtml = newHtml.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
     newHtml = newHtml.replace(/【.+?】/g, '');
+    newHtml = newHtml.replace(/.+?/g, '');
+    newHtml = newHtml.replace(/\s*\([ ,]*\)\s*/g, '');
     return newHtml;
 }
 
@@ -405,7 +407,6 @@ function replaceText(targetStr, newStr, startPos, endPos) {
 
     return before + newStr + after;
 }
-
 
 function appendToContainer(messageType, guid, message, timestamp) {
     var className = (messageType === 'sent') ? 'msg-sent' : 'msg-rcvd';
@@ -511,6 +512,27 @@ function appendToContainer(messageType, guid, message, timestamp) {
     }
 }
 
+function encodeEventData(data) {
+    // Convert the data to a JSON string if it's an object.
+    var jsonString = typeof data === 'object' ? JSON.stringify(data) : data;
+
+    // Use TextEncoder to encode the string as UTF-8 bytes.
+    if (window.TextEncoder) {
+        var encoder = new TextEncoder();
+        var uint8array = encoder.encode(jsonString);
+        var binaryString = '';
+        for (var i = 0; i < uint8array.byteLength; i++) {
+            binaryString += String.fromCharCode(uint8array[i]);
+        }
+        return btoa(binaryString);
+    } else {
+        // Fallback for older browsers:
+        var latin1String = encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+            return String.fromCharCode('0x' + p1);
+        });
+        return btoa(latin1String);
+    }
+}
 
 function save_message(guid, eventName, eventData, seq) {
     var form = this; // Correctly scoped reference to the form
@@ -520,7 +542,7 @@ function save_message(guid, eventName, eventData, seq) {
         'guid': guid, // Unique identifier for the message stream
         'event': eventName,
         'kissai_widget_atts': kissai_widget_atts,
-        'data': eventData, // Number of retry attempt (handling communication error)
+        'data': encodeEventData(eventData), // Number of retry attempt (handling communication error)
         'nonce' : kissai_vars.nonce } );
 
     jQuery.ajax({
@@ -559,7 +581,7 @@ function save_kissai_usage(guid, eventName, eventData, seq) {
         'guid': guid, // Unique identifier for the message stream
         'event': eventName,
         'kissai_widget_atts': kissai_widget_atts,
-        'data': eventData, // Number of retry attempt (handling communication error)
+        'data': encodeEventData(eventData), // Number of retry attempt (handling communication error)
         'nonce' : kissai_vars.nonce } );
 
     jQuery.ajax({
@@ -1371,8 +1393,6 @@ function init_file_upload_elements() {
         ([...files]).forEach(uploadFile);
     }
 }
-
-jQuery(init_file_upload_elements);
 
 function init_update_instructions_button() {
     var $ = jQuery;

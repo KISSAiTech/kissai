@@ -5,8 +5,111 @@ if (!defined('ABSPATH')) {
 
 require_once( ABSPATH . '/wp-includes/pluggable.php' );
 
+function kissai_admin_settings_assets($hook_suffix) {
+    // Suppose you want inline CSS on the “Register” page
+    $inline_css = '
+input[name="openai_assistant_name"]::placeholder {
+    opacity: 0.4;
+}
+.button-red {
+    background-color: #b84300;
+    color: white;
+    border-color: #b84300;
+    border: 1px;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.assistant-id-col {
+    width: 17em;
+}
+.form-table div.api-key-wrapper {
+    display: flex;
+    align-items: center;
+}
+.kissai-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+}
+.kissai-toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.kissai-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+.kissai-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: #fff;
+    transition: .4s;
+}
+input:checked + .kissai-slider {
+    background-color: #2271b1;  /* Toggle color when checked */
+}
+input:focus + .kissai-slider {
+    box-shadow: 0 0 1px #2271b1;
+}
+input:checked + .kissai-slider:before {
+    transform: translateX(18px);
+    border-color: white;
+}
+/* Round slider */
+.kissai-slider.round {
+    border-radius: 24px;
+}
+.kissai-slider.round:before {
+    border-radius: 50%;
+    border-color: #fff;
+    border-width: 2px;
+    border-style: solid;
+    backdrop-filter: none;
+}
+';
+
+    kissai_register_inline_style($hook_suffix . '-style', [], $inline_css);
+
+    $inline_js = "
+jQuery(document).ready(function($) {
+    // Handle changes on the radio buttons
+    $('input[type=radio][name=api_key_type]').change(function() {
+        // Disable all inputs initially
+        $('input[name=kissai_api_key], input[name=openai_api_key]').prop('disabled', true);
+        
+        // Enable the appropriate input based on selected option
+        if (this.value === 'kissai') {
+            $('input[name=kissai_api_key]').prop('disabled', false);
+        } else if (this.value === 'openai') {
+            $('input[name=openai_api_key]').prop('disabled', false);
+        }
+    });
+});
+";
+
+    kissai_register_inline_script(
+        $hook_suffix . '-script', // Handle
+        ['jquery'],                      // Dependencies
+        $inline_js,                      // The JS code
+        true                             // Load in the footer
+    );
+}
+
 // Define the function to display the settings page.
-function display_kissai_settings_page() {
+function kissai_display_settings_page() {
     wp_enqueue_style('kissai-style');
     global $kissai_api;
     $user = $kissai_api->get_current_kissai_user();
@@ -16,10 +119,10 @@ function display_kissai_settings_page() {
     }
 
     // Fetch the current API key type or default to 'kissai'
-    $api_key_type = get_kissai_option('api_key_type', 'kissai');  // Default to 'kissai' if not set
-    $kissai_api_key = get_kissai_option('api_key');
-    $openai_api_key = get_kissai_option('openai_api_key');
-    $debug_mode = get_kissai_option('debug_mode');
+    $api_key_type = kissai_get_option('api_key_type', 'kissai');  // Default to 'kissai' if not set
+    $kissai_api_key = kissai_get_option('api_key');
+    $openai_api_key = kissai_get_option('openai_api_key');
+    $debug_mode = kissai_get_option('debug_mode');
 
     $validity = $kissai_api->get_key_validity($kissai_api_key);
 
@@ -30,100 +133,10 @@ function display_kissai_settings_page() {
         }
     }
     ?>
-    <style>
-        input[name="openai_assistant_name"]::placeholder {
-            opacity: 0.4;
-        }
-        .button-red {
-            background-color: #b84300;
-            color: white;
-            border-color: #b84300;
-            border: 1px;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-        .assistant-id-col {
-            width: 17em;
-        }
-        .form-table div.api-key-wrapper {
-            display: flex;
-            align-items: center;
-        }
-        .kissai-toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 40px;
-            height: 22px;
-        }
-        .kissai-toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .kissai-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-        }
-        .kissai-slider:before {
-            position: absolute;
-            content: "";
-            height: 14px;
-            width: 14px;
-            left: 2px;
-            bottom: 2px;
-            background-color: #fff;
-            transition: .4s;
-        }
-        input:checked + .kissai-slider {
-            background-color: #2271b1;  /* Toggle color when checked */
-        }
-        input:focus + .kissai-slider {
-            box-shadow: 0 0 1px #2271b1;
-        }
-        input:checked + .kissai-slider:before {
-            transform: translateX(18px);
-            border-color: white;
-        }
-        /* Round slider */
-        .kissai-slider.round {
-            border-radius: 24px;
-        }
-        .kissai-slider.round:before {
-            border-radius: 50%;
-            border-color: #fff;
-            border-width: 2px;
-            border-style: solid;
-            backdrop-filter: none;
-        }
-    </style>
-    <script type="text/javascript">
-        jQuery(document).ready(function($) {
-            // Handle changes on the radio buttons
-            $('input[type=radio][name=api_key_type]').change(function() {
-                // Disable all inputs initially
-                $('input[name=kissai_api_key], input[name=openai_api_key]').prop('disabled', true);
-                
-                // Enable the appropriate input based on selected option
-                if (this.value === 'kissai') {
-                    $('input[name=kissai_api_key]').prop('disabled', false);
-                } else if (this.value === 'openai') {
-                    $('input[name=openai_api_key]').prop('disabled', false);
-                }
-            });
-        });
-    </script>
-
     <div class="wrap">
         <h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
         <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-            <?php wp_nonce_field( 'save_kissai_plugin_settings' ); ?>
+            <?php wp_nonce_field( 'kissai_save_plugin_settings' ); ?>
             
             <table class="form-table">
                 <tr>
@@ -190,7 +203,7 @@ function display_kissai_settings_page() {
                     </td>
                 </tr>
             </table>
-            <input type="hidden" name="action" value="save_kissai_plugin_settings" />
+            <input type="hidden" name="action" value="kissai_save_plugin_settings" />
         </form>
         <form method="post">
             <p>
@@ -203,9 +216,9 @@ function display_kissai_settings_page() {
 }
 
 // Define the function to save the settings.
-function save_kissai_plugin_settings() {
+function kissai_save_plugin_settings() {
     // Check security nonce
-    check_admin_referer('save_kissai_plugin_settings');
+    check_admin_referer('kissai_save_plugin_settings');
 
     if (isset($_POST['reset_database'])) {
         global $kissai_db;
@@ -222,18 +235,18 @@ function save_kissai_plugin_settings() {
 
     /// Save the selected API key type or default to 'kissai'
     $api_key_type = isset($_POST['api_key_type']) ? sanitize_text_field( wp_unslash( $_POST['api_key_type'] ) ) : 'kissai';
-    update_kissai_option('api_key_type', $api_key_type);
+    kissai_update_option('api_key_type', $api_key_type);
 
     // Update the KissAi and OpenAI API keys
     if (isset($_POST['kissai_api_key'])) {
-        update_kissai_option('api_key', sanitize_text_field( wp_unslash( $_POST['kissai_api_key'] ) ));
+        kissai_update_option('api_key', sanitize_text_field( wp_unslash( $_POST['kissai_api_key'] ) ));
     }
     if (isset($_POST['openai_api_key'])) {
-        update_kissai_option('openai_api_key', sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ) ));
+        kissai_update_option('openai_api_key', sanitize_text_field( wp_unslash( $_POST['openai_api_key'] ) ));
     }
 
     $debug_mode = isset($_POST['debug_mode']) ? 'true' : 'false';
-    update_kissai_option('debug_mode', $debug_mode);
+    kissai_update_option('debug_mode', $debug_mode);
 
     // Redirect back to the settings page with a success message.
     wp_redirect( admin_url( 'admin.php?page=kissai-plugin-settings&saved=true' ) );
@@ -241,4 +254,4 @@ function save_kissai_plugin_settings() {
 }
 
 // Add the action to handle saving the settings.
-add_action( 'admin_post_save_kissai_plugin_settings', 'save_kissai_plugin_settings' );
+add_action( 'admin_post_kissai_save_plugin_settings', 'kissai_save_plugin_settings' );

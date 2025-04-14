@@ -1,6 +1,11 @@
 <?php
 
-class KissAi_API extends API_Base {
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+use KissAi\KissAi_DB;
+use KissAi\OpenAI_API;
+
+class KissAi_API extends KissAi_API_Base {
     private $api_key;
     private $kissai_user_id;
     private $kissai_user;
@@ -82,23 +87,21 @@ class KissAi_API extends API_Base {
         } else {
             // For guests, use a cookie to store a unique session identifier
             if (isset($_COOKIE['wp_guest_session_id'])) {
-                // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-                $cookie_value = wp_unslash($_COOKIE['wp_guest_session_id']);
-                return sanitize_text_field($cookie_value);
+                return sanitize_text_field( wp_unslash($_COOKIE['wp_guest_session_id']) );
             }
         }
         return null;
     }
     
     public static function get_bg_process_api_key_setting() {
-        $apikey = get_kissai_option('bg_process_api_key');
+        $apikey = kissai_get_option('bg_process_api_key');
         if ($apikey)
             return $apikey;
         return null;
     }
 
     public static function get_api_key() {
-        $apikey = get_kissai_option('api_key');
+        $apikey = kissai_get_option('api_key');
         if($apikey)
             return $apikey;
         return null;
@@ -115,17 +118,14 @@ class KissAi_API extends API_Base {
     }
 
     public function get_default_header() {
-        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        $raw_host = isset($_SERVER['HTTP_HOST']) ? wp_unslash($_SERVER['HTTP_HOST']) : '';
-
-        $host = sanitize_text_field($raw_host);
+        $host = isset($_SERVER['HTTP_HOST']) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
 
         return array(
             'Authorization' => 'Bearer ' . $this->api_key,
             'Content-Type' => 'application/json',
             'Origin' => $host,
             'API-ver' => 'kissai=v1',
-            'KissAi-ver' => get_kissai_plugin_version(),
+            'KissAi-ver' => kissai_get_plugin_version(),
         );
     }
 
@@ -236,7 +236,7 @@ class KissAi_API extends API_Base {
     public function get_assistants($save = false) {
         if ($this->api_key) {
             $headers = $this->get_header();
-            $email = get_kissai_option('api_user_email');
+            $email = kissai_get_option('api_user_email');
             if ($email) {
                 $user = $this->get_kissai_user($email);
                 if (!empty($user) && !empty($user->id)) {
@@ -329,7 +329,7 @@ class KissAi_API extends API_Base {
     }
 
     private function get_saved_service_api_key() {
-        $service_key = get_kissai_option('openai_api_key');
+        $service_key = kissai_get_option('openai_api_key');
         if (empty($service_key)) {
             $service_key = get_transient('kissai_service_key');
         }
@@ -362,7 +362,7 @@ class KissAi_API extends API_Base {
     
     public function get_service_api_key_from_kissai_server($return_response = false) {
         $service_key = null;
-        $email = get_kissai_option('api_user_email');
+        $email = kissai_get_option('api_user_email');
         if ($email) {
             $user = $this->get_kissai_user($email);
             if ($user) {
@@ -413,18 +413,18 @@ class KissAi_API extends API_Base {
     }
 
     public function get_service_api_key() {
-        $api_key_type = get_kissai_option('api_key_type', 'kissai');
+        $api_key_type = kissai_get_option('api_key_type', 'kissai');
         
         if ($api_key_type === 'kissai') {
             $service_key = $this->get_service_api_key_from_kissai();
         }
         else if ($api_key_type === 'openai') {
-            $service_key = get_kissai_option('openai_api_key');
+            $service_key = kissai_get_option('openai_api_key');
             if (!empty($service_key)) {
                 $this->is_service_key_from_kissai = false;
             }
             else {
-                update_kissai_option('api_key_type', 'kissai');
+                kissai_update_option('api_key_type', 'kissai');
                 $service_key = $this->get_service_api_key_from_kissai();
             }
         }
@@ -432,25 +432,25 @@ class KissAi_API extends API_Base {
     }
 
     public function get_kissai_user_id() {
-        $data = get_kissai_option('api_user_data');
+        $data = kissai_get_option('api_user_data');
         if ($data !== null && !empty($data))
             $this->kissai_user = json_decode($data);
         else {
-            $email = get_kissai_option('api_user_email');
+            $email = kissai_get_option('api_user_email');
             if ($email) {
                 $data = $this->get_kissai_user($email);
             }
         }
-        $this->kissai_user_id = get_kissai_option('api_user_id');
+        $this->kissai_user_id = kissai_get_option('api_user_id');
         return $this->kissai_user_id;
     }
 
     public function update_kissai_user_data($data) {
         $this->kissai_user_id = $data->id;
         $this->kissai_user = $data;
-        $json = json_encode($data);
-        update_kissai_option('api_user_id', $this->kissai_user_id);
-        update_kissai_option('api_user_data', $json);
+        $json = kissai_json_encode($data);
+        kissai_update_option('api_user_id', $this->kissai_user_id);
+        kissai_update_option('api_user_data', $json);
     }
 
     public function get_kissai_user($email) {
@@ -508,7 +508,7 @@ class KissAi_API extends API_Base {
     }
 
     public function get_current_kissai_user() {
-        $email = get_kissai_option('api_user_email');
+        $email = kissai_get_option('api_user_email');
         $user = null;
         if ($email) {
             $user = $this->get_kissai_user($email);
@@ -548,7 +548,7 @@ class KissAi_API extends API_Base {
         }
         else {
             if ($user && $user->licenses) {
-                $kissai_api_key = get_kissai_option('api_key');
+                $kissai_api_key = kissai_get_option('api_key');
                 $license = $this->get_key_license($user, $kissai_api_key);
                 if ($license && $license->price > 0) {
                     return true;
@@ -658,7 +658,7 @@ class KissAi_API extends API_Base {
             $response = wp_remote_post($endpoint, [
                 'method' => 'POST',
                 'headers' => $headers,
-                'body' => json_encode($payload),
+                'body' => kissai_json_encode($payload),
                 'timeout' => 30, // Timeout in seconds
             ]);
 
@@ -684,7 +684,7 @@ class KissAi_API extends API_Base {
         return null;
     }
 
-    public function call_update_token_usage($user_id, $call_nonce, $token_input_count, $token_output_count) {
+    public function call_update_token_usage($user_id, $call_nonce, $model_id, $token_input_count, $token_output_count) {
         // Ensure we have an API key before proceeding
         $api_key_type = KissAi_DB::get_current_api_key_type();
         if ($api_key_type == 'openai') {
@@ -701,15 +701,17 @@ class KissAi_API extends API_Base {
             $payload = [
                 'user_id' => (int) $user_id,
                 'call_nonce' => sanitize_text_field($call_nonce),
+                'model_id' => sanitize_text_field($model_id),
                 'token_input_count' => (int) $token_input_count,
                 'token_output_count' => (int) $token_output_count
             ];
+
 
             // Send the POST request
             $response = wp_remote_post($endpoint, [
                 'method' => 'POST',
                 'headers' => $headers,
-                'body' => json_encode($payload),
+                'body' => kissai_json_encode($payload),
                 'timeout' => 30, // Timeout in seconds
             ]);
 
@@ -926,12 +928,12 @@ class KissAi_API extends API_Base {
 global $kissai_api;
 $kissai_api = new KissAi_API();
 
-function http_dev_request_args($parsed_args, $url) {
+function kissai_http_dev_request_args($parsed_args, $url) {
     // Check if the site URL ends with '.local'
     if (strpos(home_url(), '.local') === (strlen(home_url()) - strlen('.local'))) {
         $parsed_args['sslverify'] = false;
     }
     return $parsed_args;
 }
-add_filter('http_request_args', 'http_dev_request_args', 10, 2);
+add_filter('http_request_args', 'kissai_http_dev_request_args', 10, 2);
 add_action('send_headers', [KissAi_API::class, 'save_guest_user_session_cookie']);

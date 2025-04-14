@@ -1,4 +1,17 @@
 <?php
+
+namespace KissAi;
+
+if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+
+use KissAi\KissAi_DB;
+use KissAi\OpenAI_API;
+use KissAi\OpenAI_Endpoints;
+use KissAi_API_Endpoints;
+use WP_Error;
+use WP_REST_Response;
+use WP_REST_Server;
+
 require_once plugin_dir_path( __FILE__ ) . 'class-kissai-base-widget.php';
 
 class KissAi_Widget extends KissAi_Base_Widget {
@@ -164,7 +177,10 @@ class KissAi_Widget extends KissAi_Base_Widget {
             <input class="checkbox" type="checkbox" <?php checked($suggested_questions_auto_load, 'on'); ?>
                 id="<?php echo esc_attr($this->get_field_id('suggested_questions_auto_load')); ?>"
                 name="<?php echo esc_attr($this->get_field_name('suggested_questions_auto_load')); ?>" />
-            <p><div style="width:10px;height:10px;display: inline-block;"><?php echo self::circled_exclamation; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div> Enable this option to automatically generate questions each time the page loads. Please note, this may increase API usage and associated costs.</p>
+            <p><div style="width:10px;height:10px;display: inline-block;"><?php
+                $allowed_svg_html = self::get_allowed_svg_html();
+                echo wp_kses(self::circled_exclamation, $allowed_svg_html);
+                ?></div> Enable this option to automatically generate questions each time the page loads. Please note, this may increase API usage and associated costs.</p>
         </div>
         <div>
             <label for="<?php echo esc_attr($this->get_field_id('suggested_questions_trigger_text')); ?>"><?php echo esc_html__('Suggested Questions Request Text:', 'kissai'); ?></label>
@@ -227,7 +243,8 @@ class KissAi_Widget extends KissAi_Base_Widget {
 
         $atts = self::get_kissai_shortcode_atts($instance);
         $body = self::kissai_shortcode($atts);
-        echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        $allowed_html = self::get_allowed_html();
+        echo wp_kses($body, $allowed_html);
 
         echo $args['after_widget']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
@@ -296,7 +313,6 @@ class KissAi_Widget extends KissAi_Base_Widget {
 
         // We'll create a container with an input box for the question,
         // "Add"/"Edit" buttons, and a table listing existing questions.
-        // We'll also include some inline JS for handling user interactions.
 
         ob_start();
         ?>
@@ -361,7 +377,11 @@ class KissAi_Widget extends KissAi_Base_Widget {
             $assistant = $chatgpt_api->get_assistant();
             if ($assistant === null) {
                 ?>
-                <p><?php echo self::openai_no_assistant_message; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
+                <p>
+                <?php
+                    $allowed_html = self::get_allowed_html();
+                    echo wp_kses( self::openai_no_assistant_message, $allowed_html );
+                ?></p>
                 <?php
             }
             ?>
@@ -370,13 +390,16 @@ class KissAi_Widget extends KissAi_Base_Widget {
             <?php echo self::render_vector_store_file_list($atts); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
             </div>
             <div class="kissai-file-list-update-response"></div>
-            <div class="spinner-animation"><?php echo self::spinner_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></div>
+            <div class="spinner-animation"><?php echo wp_kses(self::spinner_icon, self::get_allowed_svg_html() ); ?></div>
 
             <?php self::render_vector_store_file_upload($atts); ?>
             <?php self::render_divider($atts['admin_file_text_divider_text']); ?>
             <?php self::render_vector_store_text_upload($atts); ?>
             <?php self::render_kissai_instructions_form($atts, $assistant); ?>
-            <?php echo self::kissai_render_suggested_questions_ui($assistant['id']); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+            <?php
+            $allowed_html = self::get_allowed_html();
+            echo wp_kses( self::kissai_render_suggested_questions_ui($assistant['id']), $allowed_html );
+            ?>
             <div class="admin-widget-response"></div>
             <?php
         }
@@ -586,7 +609,9 @@ class KissAi_Widget extends KissAi_Base_Widget {
         else {
             if (empty($instance_assistant_id)) {
                 ?>
-                <p><?php echo self::openai_no_assistant_message; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
+                <p><?php
+                    $output .= self::openai_no_assistant_message;
+                ?></p>
                 <?php
             }
             $output .= '<div id="kissai-widget-container" style="width:100%;">';
@@ -622,9 +647,11 @@ class KissAi_Widget extends KissAi_Base_Widget {
             $output .= '</div>';
             $output .= '</div>';
             if ($suggested_questions_auto_load) {
-                $output .= '<script>';
-                $output .= 'jQuery(document).ready(function($) { load_suggested_questions(); });';
-                $output .= '</script>';
+                wp_add_inline_script(
+                    'kissai-chat-widget-script',
+                    'jQuery(document).ready(function($){ load_suggested_questions(); });',
+                    'after'
+                );
             }
         }
         return $output;
@@ -655,7 +682,7 @@ class KissAi_Widget extends KissAi_Base_Widget {
                 if ($content !== null) {
                     wp_send_json_success(array(
                         'html' => $content,
-                        'script' => self::get_reset_kissai_vars_nonce_script($user),
+
                         'delay' => 500
                     ));
                 }
@@ -665,7 +692,7 @@ class KissAi_Widget extends KissAi_Base_Widget {
             else {
                 wp_send_json_success(array(
                     'html' => "",
-                    'script' => self::get_reset_kissai_vars_nonce_script($user),
+
                     'delay' => 500
                 ));
             }
@@ -686,7 +713,7 @@ class KissAi_Widget extends KissAi_Base_Widget {
         $content = self::render_kissai_shortcode_admin_mode($atts);
         wp_send_json_success(array(
             'html' => $content,
-            'script' => self::get_reset_kissai_vars_nonce_script(),
+
             'delay' => 500
         ));
     }
@@ -861,7 +888,7 @@ class KissAi_Widget extends KissAi_Base_Widget {
                                     }
                                     else if ($seq_completed === $seq) {
                                         $storedData = json_decode($response[0]->data);
-                                        if (defined(CHATGPT_REMOVE_DELTA) && CHATGPT_REMOVE_DELTA !== false) {
+                                        if (defined(KISSAI_CHATGPT_REMOVE_DELTA) && KISSAI_CHATGPT_REMOVE_DELTA !== false) {
                                             $kissai_db->remove_event_data($guid, 'thread.message.delta');
                                         }
                                         wp_send_json_success([
@@ -912,9 +939,6 @@ class KissAi_Widget extends KissAi_Base_Widget {
         $content = self::render_kissai_shortcode_admin_mode($atts);
         wp_send_json_success(array(
             'html' => $content,
-            // No need to update nonce at this stage. Only required when user login status is changed from annonymouse to logged in.
-            // 'script' => self::get_reset_kissai_vars_nonce_script(),
-            // 'delay' => 500
         ));
     }
 
@@ -927,9 +951,6 @@ class KissAi_Widget extends KissAi_Base_Widget {
         $content = self::render_vector_store_file_list($atts);
         wp_send_json_success(array(
             'html' => $content,
-            // No need to update nonce at this stage. Only required when user login status is changed from annonymouse to logged in.
-            // 'script' => self::get_reset_kissai_vars_nonce_script(),
-            // 'delay' => 500
         ));
     }
 
@@ -997,7 +1018,6 @@ class KissAi_Widget extends KissAi_Base_Widget {
         $file_name    = isset($_POST['filename'])
             ? sanitize_file_name( wp_unslash($_POST['filename']) )
             : null;
-        
         $file_id      = isset($_POST['file_id'])
             ? sanitize_text_field( wp_unslash($_POST['file_id']) )
             : null;
@@ -1110,9 +1130,6 @@ class KissAi_Widget extends KissAi_Base_Widget {
                 wp_send_json_success([
                     'guid'                => $chatgpt_api->get_session_id(),
                     'fetch_url'           => $url,
-                    'kissai_endpoint'     => KissAi_API_Endpoints::FILE,
-                    'kissai_header'       => $kissai_api_header,
-                    'kissai_user_id'      => $kissai_user_id,
                     'assistant_id'        => $assistant_id,
                     'create_vector_store_url' => strtr(
                         OpenAI_Endpoints::vector_store_files,
@@ -1202,6 +1219,8 @@ class KissAi_Widget extends KissAi_Base_Widget {
             if ($kissai_file_id) {
                 $file_path = $kissai_db->get_knowledge_file_path_by_file_id($kissai_file_id);
                 if ($file_path) {
+                    // $kissai_db->table_names is built inside KissAi_DB_Tables from $wpdb->prefix.
+                    // It never contains user input.
 // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
                     $updated = $wpdb->update(
                         $kissai_db->table_names->assistant_knowledges,
@@ -1523,17 +1542,24 @@ class KissAi_Widget extends KissAi_Base_Widget {
                 $seq = intval(sanitize_text_field(wp_unslash($_POST['seq'])));
                 $guid = sanitize_text_field(wp_unslash($_POST['guid']));
                 $eventName = sanitize_text_field(wp_unslash($_POST['event']));
-                // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-                $eventData = wp_unslash($_POST['data']);
-        
-                $event = json_decode($eventData);  // making sure the data json is properly formatted
+
+                $encoded_data = isset($_POST['data']) ? sanitize_text_field( wp_unslash( $_POST['data'] ) ) : '';
+                $decoded_data = base64_decode($encoded_data);
+
+                $decoded_event = kissai_sanitize_json_data_strict($decoded_data);
+                if ($decoded_event == false) {
+                    wp_send_json_error(['message' => 'Invalid JSON provided in data.']);
+                }
+
+                $event = json_decode($decoded_event);
+
                 if ($eventName == "thread.message.completed") {
                     if ($event) {
-                        $chatgpt_api->save_message_and_token_count($guid, OpenAI_API::MESSAGE_TYPE_RECEIVED, $eventData);
+                        $chatgpt_api->save_message_and_token_count($guid, OpenAI_API::MESSAGE_TYPE_RECEIVED, $decoded_event);
                     }
                 }
                 if (json_last_error() === JSON_ERROR_NONE) {
-                    $kissai_db->store_event_data($guid, $eventName, $eventData, $seq);
+                    $kissai_db->store_event_data($guid, $eventName, $decoded_event, $seq);
                     wp_send_json_success([
                         'guid' => $guid,
                         'seq' => $seq // Pass the next sequence number for client-side JS to use
@@ -1563,17 +1589,25 @@ class KissAi_Widget extends KissAi_Base_Widget {
                 $seq = intval(sanitize_text_field(wp_unslash($_POST['seq'])));
                 $guid = sanitize_text_field(wp_unslash($_POST['guid']));
                 $eventName = sanitize_text_field(wp_unslash($_POST['event']));
-                // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-                $eventData = wp_unslash($_POST['data']);
 
-                $event = json_decode($eventData);  // making sure the data json is properly formatted
+                $encoded_data = isset($_POST['data']) ? sanitize_text_field( wp_unslash( $_POST['data'] ) ) : '';
+                $decoded_data = base64_decode($encoded_data);
+
+                $decoded_event = kissai_sanitize_json_data_strict($decoded_data);
+
+                if ($decoded_event == false) {
+                    wp_send_json_error(['message' => 'Invalid JSON provided in data.']);
+                }
+
+                $event = json_decode($decoded_event);
+
                 if ($eventName == "thread.run.completed") {
                     if ($event) {
                         $chatgpt_api->update_token_usage($guid, $event);
                     }
                 }
                 if (json_last_error() === JSON_ERROR_NONE) {
-                    $kissai_db->store_event_data($guid, $eventName, $eventData, $seq);
+                    $kissai_db->store_event_data($guid, $eventName, $decoded_event, $seq);
                     wp_send_json_success([
                         'guid' => $guid,
                         'seq' => $seq // Pass the next sequence number for client-side JS to use
@@ -1767,9 +1801,9 @@ class KissAi_Widget extends KissAi_Base_Widget {
 add_shortcode('kissai_chat', [KissAi_Widget::class, 'kissai_shortcode']);
 
 function register_kissai_widget() {
-    register_widget('KissAi_Widget');
+    register_widget('\KissAi\KissAi_Widget');
 }
-add_action('widgets_init', 'register_kissai_widget');
+add_action('widgets_init', '\KissAi\register_kissai_widget');
 
 add_action('rest_api_init', function () {
     register_rest_route('kissai_api/v1', '/run_thread/', array(
@@ -1793,7 +1827,7 @@ function kissai_run_thread_bg($request) {
         return new WP_Error('unauthorized', 'Unauthorized access', ['status' => 403]);
     }
     // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-    $provided_secret = $_SERVER['HTTP_X_CUSTOM_SECRET'] ?? '';
+    $provided_secret = sanitize_text_field($_SERVER['HTTP_X_CUSTOM_SECRET'] ?? '');
 
     global $kissai_api;
 
